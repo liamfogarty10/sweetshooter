@@ -137,14 +137,13 @@ git push origin master
 - **Button Position**: Right side of game area, non-intrusive placement
 - **Random Selection**: 60% weapon upgrades, 40% slow-motion power
 
-#### Weapon Upgrades (3 Levels)
+#### Weapon Upgrades (2 Levels)
 1. **Double Shot**: Fires 2 bullets with slight spread
-2. **Triple Shot**: Fires 3 bullets in a fan pattern  
-3. **Spread Shot**: Fires 5 bullets in wide spread pattern
+2. **Triple Shot**: Fires 3 bullets with wider spread pattern
 
 #### Slow-Motion Power
 - **Duration**: 10 seconds (600 frames at 60fps)
-- **Effect**: Reduces sweet speed to 30% of normal
+- **Effect**: Reduces sweet speed to 25% of normal (stronger effect)
 - **Visual**: Blue overlay and countdown timer bar
 - **Strategic**: Allows clearing difficult wave situations
 

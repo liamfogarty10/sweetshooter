@@ -32,7 +32,7 @@ class SweetShooter {
         this.waveCompleted = false; // Prevent multiple wave increments
         
         // Upgrade system
-        this.weaponLevel = 0; // 0=basic, 1=double, 2=triple, 3=spread
+        this.weaponLevel = 0; // 0=basic, 1=double, 2=triple (more spread)
         this.nextUpgradeScore = 150; // First upgrade at 150 points
         this.upgradeAvailable = false;
         this.slowMotionActive = false;
@@ -320,8 +320,8 @@ class SweetShooter {
             type = types[Math.floor(Math.random() * types.length)];
         }
         
-        // Progressive speed increase - very gradual
-        const currentSpeed = this.sweetSpeed + (this.wave - 1) * 0.2;
+        // Progressive speed increase - slightly faster progression
+        const currentSpeed = this.sweetSpeed + (this.wave - 1) * 0.3;
         const sweetSize = type === 'cake' ? 40 : 30;
         
         // Ensure sweets spawn within canvas bounds with margin
@@ -341,8 +341,8 @@ class SweetShooter {
     }
     
     spawnDynamite() {
-        // Progressive speed increase - very gradual
-        const currentSpeed = this.sweetSpeed + (this.wave - 1) * 0.2;
+        // Progressive speed increase - slightly faster progression
+        const currentSpeed = this.sweetSpeed + (this.wave - 1) * 0.3;
         const dynamiteSize = 35;
         
         // Ensure dynamite spawns within canvas bounds with margin
@@ -423,7 +423,7 @@ class SweetShooter {
         }
         
         // Update sweets
-        const speedMultiplier = this.slowMotionActive ? 0.3 : 1.0; // Slow motion effect
+        const speedMultiplier = this.slowMotionActive ? 0.25 : 1.0; // Stronger slow motion effect
         for (let i = this.sweets.length - 1; i >= 0; i--) {
             const sweet = this.sweets[i];
             sweet.x += sweet.vx * speedMultiplier;
@@ -464,8 +464,8 @@ class SweetShooter {
         if (this.sweets.length === 0 && !this.spawningWave && !this.waveCompleted) {
             this.waveCompleted = true; // Mark wave as completed
             this.wave++;
-            // Much more gradual speed increase
-            this.sweetSpeed += 0.15;
+            // Slightly increased speed progression
+            this.sweetSpeed += 0.25;
             const waveDelay = Math.max(this.baseWaveDelay - (this.wave * 100), 2000);
             setTimeout(() => {
                 if (this.gameRunning) {
@@ -508,28 +508,15 @@ class SweetShooter {
                 }
                 break;
                 
-            case 2: // Triple shot
+            case 2: // Triple shot with wider spread
                 for(let i = 0; i < 3; i++) {
-                    const offsetAngle = angle + (i - 1) * 0.15;
+                    const offsetAngle = angle + (i - 1) * 0.25; // Wider spread
                     this.bullets.push({
-                        x: this.player.x + (i - 1) * 8,
+                        x: this.player.x + (i - 1) * 12,
                         y: this.player.y,
                         vx: Math.cos(offsetAngle) * this.bulletSpeed,
                         vy: Math.sin(offsetAngle) * this.bulletSpeed,
                         size: 4
-                    });
-                }
-                break;
-                
-            case 3: // Spread shot (5 bullets)
-                for(let i = 0; i < 5; i++) {
-                    const offsetAngle = angle + (i - 2) * 0.3;
-                    this.bullets.push({
-                        x: this.player.x + (i - 2) * 6,
-                        y: this.player.y,
-                        vx: Math.cos(offsetAngle) * this.bulletSpeed,
-                        vy: Math.sin(offsetAngle) * this.bulletSpeed,
-                        size: 3
                     });
                 }
                 break;
@@ -550,8 +537,8 @@ class SweetShooter {
             if (willBeSlowMotion) {
                 upgradeBtn.textContent = 'SLOW-MO ⏰';
                 upgradeBtn.style.background = 'linear-gradient(145deg, #00BFFF 0%, #0080FF 50%, #0040FF 100%)';
-            } else if (this.weaponLevel < 3) {
-                const weaponNames = ['DOUBLE SHOT 🔫', 'TRIPLE SHOT 🔫', 'SPREAD SHOT 🔫'];
+            } else if (this.weaponLevel < 2) {
+                const weaponNames = ['DOUBLE SHOT 🔫', 'TRIPLE SHOT 🔫'];
                 upgradeBtn.textContent = weaponNames[this.weaponLevel] || 'UPGRADE ⚡';
                 upgradeBtn.style.background = 'linear-gradient(145deg, #FFD700 0%, #FFA500 50%, #FF8C00 100%)';
             } else {
@@ -574,7 +561,8 @@ class SweetShooter {
             // Activate slow motion for 10 seconds
             this.slowMotionActive = true;
             this.slowMotionTimer = 600; // 10 seconds at 60fps
-        } else if (this.weaponLevel < 3) {
+            console.log('Slow motion activated!', this.slowMotionActive, this.slowMotionTimer);
+        } else if (this.weaponLevel < 2) {
             // Weapon upgrade - permanent until next upgrade
             this.weaponLevel++;
         }
