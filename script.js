@@ -732,10 +732,18 @@ class SweetShooter {
         }
     }
     
+    getSweetCost(sweetType) {
+        // Base cost starts at 100, increases by 100 for each purchased sweet
+        const baseCost = 100;
+        const increment = 100;
+        const purchasedCount = this.purchasedSweets.size;
+        return baseCost + (purchasedCount * increment);
+    }
+    
     updateShopUI() {
         document.querySelectorAll('.shop-buy-btn').forEach(btn => {
             const sweetType = btn.dataset.sweet;
-            const cost = 100;
+            const cost = this.getSweetCost(sweetType);
             
             if (this.purchasedSweets.has(sweetType)) {
                 btn.textContent = 'Purchased';
@@ -752,7 +760,7 @@ class SweetShooter {
     }
     
     buySweet(sweetType) {
-        const cost = 100;
+        const cost = this.getSweetCost(sweetType);
         
         if (this.score < cost || this.purchasedSweets.has(sweetType)) return;
         
