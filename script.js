@@ -24,9 +24,20 @@ class SweetShooter {
         this.particles = [];
         
         // Game settings
-        this.sweetsPerWave = 5;
-        this.sweetSpeed = 1;
-        this.bulletSpeed = 8;
+        this.sweetsPerWave = 3; // Start easier
+        this.sweetSpeed = 0.5; // Much slower initial speed
+        this.bulletSpeed = 10; // Faster bullets to help player
+        this.baseWaveDelay = 3000; // 3 second delay between waves
+        
+        // Sound effects
+        this.sounds = {
+            shoot: this.createSound([0.5,,169,,.01,.03,,,,,,,,5]),
+            cookieHit: this.createSound([1.5,,200,.01,,.1,1,.76,,,,-0.02,,,,.1,.01,.5]),
+            marshmallowHit: this.createSound([1.2,,350,.02,,.15,1,1.2,,,,,,,,,.02,.3]),
+            cakeHit: this.createSound([1,,150,.05,,.25,1,1.5,,,,-0.1,,,,.2,.05,.6]),
+            dynamiteExplode: this.createSound([3,,300,.1,.3,.7,4,,,,,,.5,1,1,,.2,.8]),
+            gameOver: this.createSound([2,,100,.2,.3,.5,2,1.5,,,,,1,,,.3,.1,.9])
+        };
         
         this.bindEvents();
         this.drawStartScreen();
@@ -125,6 +136,9 @@ class SweetShooter {
         const targetX = touch.clientX - rect.left;
         const targetY = touch.clientY - rect.top;
         
+        // Play shoot sound
+        this.playSound(this.sounds.shoot);
+        
         // Create bullet
         const angle = Math.atan2(targetY - this.player.y, targetX - this.player.x);
         this.bullets.push({
@@ -158,6 +172,9 @@ class SweetShooter {
         const rect = this.canvas.getBoundingClientRect();
         const targetX = e.clientX - rect.left;
         const targetY = e.clientY - rect.top;
+        
+        // Play shoot sound
+        this.playSound(this.sounds.shoot);
         
         // Create bullet
         const angle = Math.atan2(targetY - this.player.y, targetX - this.player.x);
@@ -205,31 +222,44 @@ class SweetShooter {
     }
     
     spawnWave() {
-        const sweetsInWave = this.sweetsPerWave + Math.floor(this.wave / 2);
+        // Progressive difficulty - starts easier
+        const sweetsInWave = Math.min(this.sweetsPerWave + Math.floor((this.wave - 1) / 3), 10);
+        const spawnDelay = Math.max(1500 - (this.wave * 50), 500); // Slower spawning initially
         
         for (let i = 0; i < sweetsInWave; i++) {
             setTimeout(() => {
                 this.spawnSweet();
-            }, i * 1000);
+            }, i * spawnDelay);
         }
         
-        // Occasionally spawn dynamite
-        if (Math.random() < 0.3) {
+        // Dynamite appears less frequently early on
+        const dynamiteChance = Math.min(0.1 + (this.wave * 0.05), 0.4);
+        if (Math.random() < dynamiteChance) {
             setTimeout(() => {
                 this.spawnDynamite();
-            }, Math.random() * 5000);
+            }, Math.random() * (sweetsInWave * spawnDelay));
         }
     }
     
     spawnSweet() {
         const types = ['cookie', 'marshmallow', 'cake'];
-        const type = types[Math.floor(Math.random() * types.length)];
+        
+        // Early waves have more cookies and marshmallows (easier)
+        let type;
+        if (this.wave <= 2) {
+            type = Math.random() < 0.8 ? (Math.random() < 0.5 ? 'cookie' : 'marshmallow') : 'cake';
+        } else {
+            type = types[Math.floor(Math.random() * types.length)];
+        }
+        
+        // Progressive speed increase - very gradual
+        const currentSpeed = this.sweetSpeed + (this.wave - 1) * 0.2;
         
         this.sweets.push({
             x: Math.random() * (this.canvas.width - 50),
             y: -50,
-            vx: (Math.random() - 0.5) * 2,
-            vy: this.sweetSpeed + Math.random() * 2,
+            vx: (Math.random() - 0.5) * 1.5, // Reduced horizontal movement
+            vy: currentSpeed + Math.random() * 1,
             type: type,
             size: type === 'cake' ? 40 : 30,
             health: type === 'cake' ? 2 : 1,
@@ -238,11 +268,14 @@ class SweetShooter {
     }
     
     spawnDynamite() {
+        // Progressive speed increase - very gradual
+        const currentSpeed = this.sweetSpeed + (this.wave - 1) * 0.2;
+        
         this.sweets.push({
             x: Math.random() * (this.canvas.width - 50),
             y: -50,
             vx: (Math.random() - 0.5) * 4,
-            vy: this.sweetSpeed * 2 + Math.random() * 3,
+            vy: currentSpeed * 2 + Math.random() * 3,
             type: 'dynamite',
             size: 35,
             health: 1,
@@ -276,12 +309,22 @@ class SweetShooter {
                     this.bullets.splice(i, 1);
                     
                     if (sweet.type === 'dynamite') {
+                        this.playSound(this.sounds.dynamiteExplode);
                         this.explodeDynamite(sweet.x, sweet.y);
                         this.sweets = [];
                         this.score += 100;
                     } else {
                         sweet.health--;
                         if (sweet.health <= 0) {
+                            // Play sweet-specific sound
+                            if (sweet.type === 'cookie') {
+                                this.playSound(this.sounds.cookieHit);
+                            } else if (sweet.type === 'marshmallow') {
+                                this.playSound(this.sounds.marshmallowHit);
+                            } else if (sweet.type === 'cake') {
+                                this.playSound(this.sounds.cakeHit);
+                            }
+                            
                             this.createParticles(sweet.x, sweet.y, sweet.type);
                             this.sweets.splice(j, 1);
                             this.score += sweet.type === 'cake' ? 30 : 
@@ -327,8 +370,10 @@ class SweetShooter {
         // Check if wave is complete
         if (this.sweets.length === 0) {
             this.wave++;
-            this.sweetSpeed += 0.5;
-            setTimeout(() => this.spawnWave(), 2000);
+            // Much more gradual speed increase
+            this.sweetSpeed += 0.15;
+            const waveDelay = Math.max(this.baseWaveDelay - (this.wave * 100), 1500);
+            setTimeout(() => this.spawnWave(), waveDelay);
         }
         
         this.updateUI();
@@ -917,6 +962,7 @@ class SweetShooter {
     
     gameOver() {
         this.gameRunning = false;
+        this.playSound(this.sounds.gameOver);
         document.getElementById('finalScore').textContent = this.score;
         document.getElementById('gameOver').style.display = 'block';
         document.getElementById('pauseBtn').style.display = 'none';
@@ -930,6 +976,72 @@ class SweetShooter {
         this.update();
         this.draw();
         requestAnimationFrame(() => this.gameLoop());
+    }
+    
+    // Sound generation using simplified parameters
+    createSound(params) {
+        try {
+            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            const sampleRate = audioContext.sampleRate;
+            const duration = params[4] || 0.3;
+            const length = Math.floor(sampleRate * duration);
+            const buffer = audioContext.createBuffer(1, length, sampleRate);
+            const data = buffer.getChannelData(0);
+            
+            const [volume, , frequency, attack, decay, sustain] = params;
+            
+            let phase = 0;
+            const freq = frequency || 440;
+            const attackTime = (attack || 0.01) * sampleRate;
+            const decayTime = (decay || 0.1) * sampleRate;
+            const sustainLevel = sustain || 0.3;
+            
+            for (let i = 0; i < length; i++) {
+                let envelope = 1;
+                
+                if (i < attackTime) {
+                    envelope = i / attackTime;
+                } else if (i < attackTime + decayTime) {
+                    const decayProgress = (i - attackTime) / decayTime;
+                    envelope = 1 - decayProgress * (1 - sustainLevel);
+                } else {
+                    const releaseProgress = (i - attackTime - decayTime) / (length - attackTime - decayTime);
+                    envelope = sustainLevel * (1 - releaseProgress);
+                }
+                
+                phase += (freq * Math.PI * 2) / sampleRate;
+                let sample = Math.sin(phase) * envelope * (volume || 0.5);
+                
+                data[i] = Math.max(-1, Math.min(1, sample));
+            }
+            
+            return buffer;
+        } catch (e) {
+            return null;
+        }
+    }
+    
+    playSound(buffer) {
+        if (!buffer) return;
+        try {
+            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            
+            if (audioContext.state === 'suspended') {
+                audioContext.resume();
+            }
+            
+            const source = audioContext.createBufferSource();
+            const gainNode = audioContext.createGain();
+            
+            source.buffer = buffer;
+            source.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+            gainNode.gain.value = 0.2;
+            
+            source.start(0);
+        } catch (e) {
+            // Silent fail
+        }
     }
 }
 
