@@ -38,38 +38,52 @@ class SweetShooter {
         this.slowMotionActive = false;
         this.slowMotionTimer = 0;
         
-        // Sound effects
-        this.sounds = {
-            shoot: this.createSound([0.5,,169,,.01,.03,,,,,,,,5]),
-            cookieHit: this.createSound([1.5,,200,.01,,.1,1,.76,,,,-0.02,,,,.1,.01,.5]),
-            marshmallowHit: this.createSound([1.2,,350,.02,,.15,1,1.2,,,,,,,,,.02,.3]),
-            cakeHit: this.createSound([1,,150,.05,,.25,1,1.5,,,,-0.1,,,,.2,.05,.6]),
-            dynamiteExplode: this.createSound([3,,300,.1,.3,.7,4,,,,,,.5,1,1,,.2,.8]),
-            gameOver: this.createSound([2,,100,.2,.3,.5,2,1.5,,,,,1,,,.3,.1,.9])
-        };
+        // Canvas bounds for collision detection
+        this.canvasBounds = { width: 800, height: 600, playableMargin: 30 };
+        
+        // Enhanced sound effects with better reliability
+        this.audioContext = null;
+        this.sounds = {};
+        this.initializeSounds();
         
         this.bindEvents();
         this.drawStartScreen();
     }
     
     setupCanvas() {
-        // Get actual viewport dimensions  
+        // Get actual viewport dimensions
         const viewportWidth = window.innerWidth;
         const viewportHeight = window.innerHeight;
         
-        // Calculate available space with minimal UI overhead
-        const titleHeight = 50; // Compact title
-        const padding = 20;
+        // Calculate available space more aggressively for better screen usage
+        const isPortrait = viewportHeight > viewportWidth;
+        const isMobile = viewportWidth <= 768;
         
-        const availableWidth = viewportWidth - (padding * 2);
-        const availableHeight = viewportHeight - titleHeight - (padding * 2);
+        let availableWidth, availableHeight;
         
-        // Define aspect ratio (4:3 works well for mobile and desktop)
-        const aspectRatio = 4 / 3;
+        if (isMobile) {
+            // Mobile: use almost full screen
+            availableWidth = viewportWidth * 0.98;
+            availableHeight = viewportHeight * (isPortrait ? 0.75 : 0.90);
+        } else {
+            // Desktop/Tablet: more conservative
+            availableWidth = Math.min(viewportWidth * 0.9, 900);
+            availableHeight = Math.min(viewportHeight * 0.8, 700);
+        }
+        
+        // Use flexible aspect ratio based on device
+        let aspectRatio;
+        if (isMobile && isPortrait) {
+            aspectRatio = 3 / 4; // Portrait mobile: taller canvas
+        } else if (isMobile) {
+            aspectRatio = 4 / 3; // Landscape mobile
+        } else {
+            aspectRatio = 16 / 10; // Desktop: wider canvas
+        }
         
         let canvasWidth, canvasHeight;
         
-        // Calculate size based on available space
+        // Calculate size based on available space and aspect ratio
         if (availableWidth / availableHeight > aspectRatio) {
             // Limited by height
             canvasHeight = availableHeight;
@@ -80,16 +94,9 @@ class SweetShooter {
             canvasHeight = canvasWidth / aspectRatio;
         }
         
-        // Apply maximum sizes for very large screens
-        const maxWidth = Math.min(800, viewportWidth * 0.95);
-        const maxHeight = Math.min(600, viewportHeight * 0.85);
-        
-        canvasWidth = Math.min(canvasWidth, maxWidth);
-        canvasHeight = Math.min(canvasHeight, maxHeight);
-        
         // Ensure minimum playable size
-        canvasWidth = Math.max(300, canvasWidth);
-        canvasHeight = Math.max(225, canvasHeight);
+        canvasWidth = Math.max(320, canvasWidth);
+        canvasHeight = Math.max(240, canvasHeight);
         
         // Set canvas dimensions
         this.canvas.width = canvasWidth;
@@ -103,7 +110,14 @@ class SweetShooter {
             this.player.y = this.canvas.height - 40; // Only top half visible
         }
         
-        console.log(`Canvas sized: ${canvasWidth}x${canvasHeight} for viewport: ${viewportWidth}x${viewportHeight}`);
+        // Store canvas bounds for collision detection
+        this.canvasBounds = {
+            width: canvasWidth,
+            height: canvasHeight,
+            playableMargin: 30 // Keep sweets within this margin
+        };
+        
+        console.log(`Canvas sized: ${canvasWidth}x${canvasHeight} for viewport: ${viewportWidth}x${viewportHeight}, aspect: ${aspectRatio.toFixed(2)}`);
     }
     
     bindEvents() {
@@ -175,7 +189,7 @@ class SweetShooter {
         const targetY = touch.clientY - rect.top;
         
         // Play shoot sound
-        this.playSound(this.sounds.shoot);
+        this.playSound('shoot', 0.4);
         
         // Create bullets based on weapon level
         this.createBullets(targetX, targetY);
@@ -206,7 +220,7 @@ class SweetShooter {
         const targetY = e.clientY - rect.top;
         
         // Play shoot sound
-        this.playSound(this.sounds.shoot);
+        this.playSound('shoot', 0.4);
         
         // Create bullets based on weapon level
         this.createBullets(targetX, targetY);
@@ -217,6 +231,11 @@ class SweetShooter {
     }
     
     startGame() {
+        // Initialize audio context on first user interaction
+        if (!this.audioContext || this.audioContext.state === 'suspended') {
+            this.initializeSounds();
+        }
+        
         this.gameRunning = true;
         this.score = 0;
         this.wave = 1;
@@ -303,14 +322,19 @@ class SweetShooter {
         
         // Progressive speed increase - very gradual
         const currentSpeed = this.sweetSpeed + (this.wave - 1) * 0.2;
+        const sweetSize = type === 'cake' ? 40 : 30;
+        
+        // Ensure sweets spawn within canvas bounds with margin
+        const margin = this.canvasBounds.playableMargin + sweetSize / 2;
+        const spawnX = margin + Math.random() * (this.canvas.width - margin * 2);
         
         this.sweets.push({
-            x: Math.random() * (this.canvas.width - 50),
-            y: -50,
-            vx: (Math.random() - 0.5) * 1.5, // Reduced horizontal movement
-            vy: currentSpeed + Math.random() * 1,
+            x: spawnX,
+            y: -sweetSize,
+            vx: (Math.random() - 0.5) * 1.0, // Reduced horizontal movement for better containment
+            vy: currentSpeed + Math.random() * 0.8,
             type: type,
-            size: type === 'cake' ? 40 : 30,
+            size: sweetSize,
             health: type === 'cake' ? 2 : 1,
             maxHealth: type === 'cake' ? 2 : 1
         });
@@ -319,14 +343,19 @@ class SweetShooter {
     spawnDynamite() {
         // Progressive speed increase - very gradual
         const currentSpeed = this.sweetSpeed + (this.wave - 1) * 0.2;
+        const dynamiteSize = 35;
+        
+        // Ensure dynamite spawns within canvas bounds with margin
+        const margin = this.canvasBounds.playableMargin + dynamiteSize / 2;
+        const spawnX = margin + Math.random() * (this.canvas.width - margin * 2);
         
         this.sweets.push({
-            x: Math.random() * (this.canvas.width - 50),
-            y: -50,
-            vx: (Math.random() - 0.5) * 4,
-            vy: currentSpeed * 2 + Math.random() * 3,
+            x: spawnX,
+            y: -dynamiteSize,
+            vx: (Math.random() - 0.5) * 2.5, // Reduced horizontal movement
+            vy: currentSpeed * 1.8 + Math.random() * 2,
             type: 'dynamite',
-            size: 35,
+            size: dynamiteSize,
             health: 1,
             maxHealth: 1
         });
@@ -358,7 +387,7 @@ class SweetShooter {
                     this.bullets.splice(i, 1);
                     
                     if (sweet.type === 'dynamite') {
-                        this.playSound(this.sounds.dynamiteExplode);
+                        this.playSound('dynamiteExplode', 0.6);
                         this.explodeDynamite(sweet.x, sweet.y);
                         this.sweets = [];
                         this.score += 100;
@@ -367,11 +396,11 @@ class SweetShooter {
                         if (sweet.health <= 0) {
                             // Play sweet-specific sound
                             if (sweet.type === 'cookie') {
-                                this.playSound(this.sounds.cookieHit);
+                                this.playSound('cookieHit', 0.3);
                             } else if (sweet.type === 'marshmallow') {
-                                this.playSound(this.sounds.marshmallowHit);
+                                this.playSound('marshmallowHit', 0.35);
                             } else if (sweet.type === 'cake') {
-                                this.playSound(this.sounds.cakeHit);
+                                this.playSound('cakeHit', 0.4);
                             }
                             
                             this.createParticles(sweet.x, sweet.y, sweet.type);
@@ -399,6 +428,16 @@ class SweetShooter {
             const sweet = this.sweets[i];
             sweet.x += sweet.vx * speedMultiplier;
             sweet.y += sweet.vy * speedMultiplier;
+            
+            // Keep sweets within canvas bounds
+            const margin = sweet.size / 2;
+            if (sweet.x < margin) {
+                sweet.x = margin;
+                sweet.vx = Math.abs(sweet.vx); // Bounce off left edge
+            } else if (sweet.x > this.canvas.width - margin) {
+                sweet.x = this.canvas.width - margin;
+                sweet.vx = -Math.abs(sweet.vx); // Bounce off right edge
+            }
             
             // Remove sweets that fall off screen
             if (sweet.y > this.canvas.height + 50) {
@@ -501,6 +540,9 @@ class SweetShooter {
         if (this.score >= this.nextUpgradeScore && !this.upgradeAvailable) {
             this.upgradeAvailable = true;
             
+            // Play upgrade ready sound
+            this.playSound('upgradeReady', 0.5);
+            
             // Randomly determine upgrade type and update button text
             const willBeSlowMotion = Math.random() < 0.4;
             const upgradeBtn = document.getElementById('upgradeWeapon');
@@ -524,15 +566,16 @@ class SweetShooter {
     upgradeWeapon() {
         if (!this.upgradeAvailable) return;
         
-        // Random chance for slow-motion vs weapon upgrade
-        const useSlowMotion = Math.random() < 0.4; // 40% chance for slow-motion
+        // Check what type of upgrade this button represents
+        const upgradeBtn = document.getElementById('upgradeWeapon');
+        const isSlowMotion = upgradeBtn.textContent.includes('SLOW-MO');
         
-        if (useSlowMotion) {
+        if (isSlowMotion) {
             // Activate slow motion for 10 seconds
             this.slowMotionActive = true;
             this.slowMotionTimer = 600; // 10 seconds at 60fps
         } else if (this.weaponLevel < 3) {
-            // Weapon upgrade
+            // Weapon upgrade - permanent until next upgrade
             this.weaponLevel++;
         }
         
@@ -540,8 +583,8 @@ class SweetShooter {
         this.upgradeAvailable = false;
         document.getElementById('upgradeBtn').style.display = 'none';
         
-        // Play upgrade sound
-        this.playSound(this.sounds.dynamiteExplode);
+        // Play upgrade activation sound
+        this.playSound('upgradeActivate', 0.5);
         
         // Create upgrade particles
         this.createUpgradeParticles();
@@ -562,12 +605,12 @@ class SweetShooter {
     
     loseLife() {
         this.lives--;
-        // Reset upgrades when life is lost
-        this.weaponLevel = 0;
-        this.nextUpgradeScore = Math.floor(this.score / 150) * 150 + 150;
-        this.upgradeAvailable = false;
+        // Only reset slow-motion, keep weapon upgrades
         this.slowMotionActive = false;
         this.slowMotionTimer = 0;
+        
+        // Hide upgrade button if visible
+        this.upgradeAvailable = false;
         document.getElementById('upgradeBtn').style.display = 'none';
         
         if (this.lives <= 0) {
@@ -1200,7 +1243,7 @@ class SweetShooter {
     
     gameOver() {
         this.gameRunning = false;
-        this.playSound(this.sounds.gameOver);
+        this.playSound('gameOver', 0.4);
         document.getElementById('finalScore').textContent = this.score;
         document.getElementById('gameOver').style.display = 'block';
         document.getElementById('pauseBtn').style.display = 'none';
@@ -1259,26 +1302,48 @@ class SweetShooter {
         }
     }
     
-    playSound(buffer) {
-        if (!buffer) return;
+    initializeSounds() {
         try {
-            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
             
-            if (audioContext.state === 'suspended') {
-                audioContext.resume();
+            // Create all sound buffers
+            this.sounds = {
+                shoot: this.createSound([0.6,,200,,.02,.04,,,,,,,,6]), // Sharper shoot
+                cookieHit: this.createSound([1.2,,250,.01,,.08,1,.8,,,,-0.02,,,,.15,.01,.4]), // Crisp cookie
+                marshmallowHit: this.createSound([1.4,,380,.02,,.12,1,1.1,,,,,,,,,.02,.25]), // Soft marshmallow
+                cakeHit: this.createSound([0.8,,180,.05,,.2,1,1.3,,,,-0.1,,,,.25,.05,.5]), // Rich cake
+                dynamiteExplode: this.createSound([2.5,,280,.1,.25,.6,4,,,,,,.4,.8,.9,,.15,.7]), // Big explosion
+                upgradeReady: this.createSound([1.5,,400,.05,.15,.3,1,1.8,,,,.1,,,.3,.1,.4]), // Upgrade available chime
+                upgradeActivate: this.createSound([2,,350,.08,.2,.5,2,1.5,,,,.15,,,.4,.2,.6]), // Upgrade activation
+                gameOver: this.createSound([1.8,,120,.15,.25,.4,2,1.2,,,,,1,,,.25,.08,.8]) // Game over
+            };
+        } catch (e) {
+            console.warn('Audio initialization failed:', e);
+            this.sounds = {};
+        }
+    }
+    
+    playSound(soundName, volume = 0.3) {
+        if (!this.audioContext || !this.sounds[soundName]) return;
+        
+        try {
+            // Ensure audio context is running
+            if (this.audioContext.state === 'suspended') {
+                this.audioContext.resume();
             }
             
-            const source = audioContext.createBufferSource();
-            const gainNode = audioContext.createGain();
+            const source = this.audioContext.createBufferSource();
+            const gainNode = this.audioContext.createGain();
             
-            source.buffer = buffer;
+            source.buffer = this.sounds[soundName];
             source.connect(gainNode);
-            gainNode.connect(audioContext.destination);
-            gainNode.gain.value = 0.2;
+            gainNode.connect(this.audioContext.destination);
+            gainNode.gain.value = volume;
             
             source.start(0);
         } catch (e) {
-            // Silent fail
+            // Silent fail but log for debugging
+            console.warn('Sound play failed:', e);
         }
     }
 }
