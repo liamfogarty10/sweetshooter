@@ -649,9 +649,10 @@ class SweetShooter {
         this.shopOpen = false;
         document.getElementById('shopOverlay').style.display = 'none';
         
-        // Resume game if it was running
-        if (this.lives > 0 && this.sweets.length > 0) {
+        // Resume game if player is alive (regardless of sweet count)
+        if (this.lives > 0) {
             this.gameRunning = true;
+            // If no sweets are currently on screen, the wave system will spawn new ones
             this.gameLoop();
         }
     }
