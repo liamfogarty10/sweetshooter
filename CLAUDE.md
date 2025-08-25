@@ -130,4 +130,33 @@ git push origin master
 - **Progressive Enhancement**: Graceful fallback for audio issues
 - **Cross-platform**: Works on iOS, Android, Windows, Mac, Linux browsers
 
-This game demonstrates advanced HTML5 Canvas techniques, responsive web design, Web Audio API usage, and mobile-first development practices.
+### 🚀 Upgrade System (Latest Feature)
+
+#### Upgrade Mechanics
+- **Trigger**: Upgrade available every 150 points
+- **Button Position**: Right side of game area, non-intrusive placement
+- **Random Selection**: 60% weapon upgrades, 40% slow-motion power
+
+#### Weapon Upgrades (3 Levels)
+1. **Double Shot**: Fires 2 bullets with slight spread
+2. **Triple Shot**: Fires 3 bullets in a fan pattern  
+3. **Spread Shot**: Fires 5 bullets in wide spread pattern
+
+#### Slow-Motion Power
+- **Duration**: 10 seconds (600 frames at 60fps)
+- **Effect**: Reduces sweet speed to 30% of normal
+- **Visual**: Blue overlay and countdown timer bar
+- **Strategic**: Allows clearing difficult wave situations
+
+#### Upgrade Reset System
+- **Life Loss**: All upgrades reset when life is lost
+- **Recovery**: Next upgrade available at next 150-point interval
+- **Balance**: Prevents permanent advantages while rewarding skill
+
+#### Visual Features
+- **Dynamic Button**: Shows upgrade type before selection
+- **Color Coding**: Gold for weapons, blue for slow-motion
+- **Particle Effects**: Golden particles on upgrade activation
+- **Timer Display**: Visual countdown during slow-motion
+
+This game demonstrates advanced HTML5 Canvas techniques, responsive web design, Web Audio API usage, mobile-first development practices, and dynamic upgrade systems.

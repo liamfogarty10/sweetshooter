@@ -31,6 +31,13 @@ class SweetShooter {
         this.spawningWave = false; // Prevent multiple wave spawning
         this.waveCompleted = false; // Prevent multiple wave increments
         
+        // Upgrade system
+        this.weaponLevel = 0; // 0=basic, 1=double, 2=triple, 3=spread
+        this.nextUpgradeScore = 150; // First upgrade at 150 points
+        this.upgradeAvailable = false;
+        this.slowMotionActive = false;
+        this.slowMotionTimer = 0;
+        
         // Sound effects
         this.sounds = {
             shoot: this.createSound([0.5,,169,,.01,.03,,,,,,,,5]),
@@ -103,6 +110,7 @@ class SweetShooter {
         document.getElementById('startBtn').addEventListener('click', () => this.startGame());
         document.getElementById('pauseBtn').addEventListener('click', () => this.pauseGame());
         document.getElementById('restartBtn').addEventListener('click', () => this.restartGame());
+        document.getElementById('upgradeWeapon').addEventListener('click', () => this.upgradeWeapon());
         
         // Mouse events
         this.canvas.addEventListener('click', (e) => this.handleShoot(e));
@@ -169,17 +177,11 @@ class SweetShooter {
         // Play shoot sound
         this.playSound(this.sounds.shoot);
         
-        // Create bullet
-        const angle = Math.atan2(targetY - this.player.y, targetX - this.player.x);
-        this.bullets.push({
-            x: this.player.x,
-            y: this.player.y,
-            vx: Math.cos(angle) * this.bulletSpeed,
-            vy: Math.sin(angle) * this.bulletSpeed,
-            size: 4
-        });
+        // Create bullets based on weapon level
+        this.createBullets(targetX, targetY);
         
         // Update player angle
+        const angle = Math.atan2(targetY - this.player.y, targetX - this.player.x);
         this.player.angle = angle;
     }
     
@@ -206,17 +208,11 @@ class SweetShooter {
         // Play shoot sound
         this.playSound(this.sounds.shoot);
         
-        // Create bullet
-        const angle = Math.atan2(targetY - this.player.y, targetX - this.player.x);
-        this.bullets.push({
-            x: this.player.x,
-            y: this.player.y,
-            vx: Math.cos(angle) * this.bulletSpeed,
-            vy: Math.sin(angle) * this.bulletSpeed,
-            size: 4
-        });
+        // Create bullets based on weapon level
+        this.createBullets(targetX, targetY);
         
         // Update player angle
+        const angle = Math.atan2(targetY - this.player.y, targetX - this.player.x);
         this.player.angle = angle;
     }
     
@@ -230,6 +226,14 @@ class SweetShooter {
         this.particles = [];
         this.spawningWave = false; // Reset spawning flag
         this.waveCompleted = false; // Reset wave completion flag
+        
+        // Reset upgrade system
+        this.weaponLevel = 0;
+        this.nextUpgradeScore = 150;
+        this.upgradeAvailable = false;
+        this.slowMotionActive = false;
+        this.slowMotionTimer = 0;
+        document.getElementById('upgradeBtn').style.display = 'none';
         
         document.getElementById('startBtn').style.display = 'none';
         document.getElementById('pauseBtn').style.display = 'inline-block';
@@ -381,21 +385,26 @@ class SweetShooter {
             }
         }
         
+        // Update slow motion timer
+        if (this.slowMotionActive) {
+            this.slowMotionTimer--;
+            if (this.slowMotionTimer <= 0) {
+                this.slowMotionActive = false;
+            }
+        }
+        
         // Update sweets
+        const speedMultiplier = this.slowMotionActive ? 0.3 : 1.0; // Slow motion effect
         for (let i = this.sweets.length - 1; i >= 0; i--) {
             const sweet = this.sweets[i];
-            sweet.x += sweet.vx;
-            sweet.y += sweet.vy;
+            sweet.x += sweet.vx * speedMultiplier;
+            sweet.y += sweet.vy * speedMultiplier;
             
             // Remove sweets that fall off screen
             if (sweet.y > this.canvas.height + 50) {
                 this.sweets.splice(i, 1);
                 if (sweet.type !== 'dynamite') {
-                    this.lives--;
-                    if (this.lives <= 0) {
-                        this.gameOver();
-                        return;
-                    }
+                    this.loseLife();
                 }
             }
         }
@@ -427,7 +436,143 @@ class SweetShooter {
             }, waveDelay);
         }
         
+        // Check for upgrade availability
+        this.checkUpgradeAvailable();
+        
         this.updateUI();
+    }
+    
+    createBullets(targetX, targetY) {
+        const angle = Math.atan2(targetY - this.player.y, targetX - this.player.x);
+        
+        switch(this.weaponLevel) {
+            case 0: // Basic single shot
+                this.bullets.push({
+                    x: this.player.x,
+                    y: this.player.y,
+                    vx: Math.cos(angle) * this.bulletSpeed,
+                    vy: Math.sin(angle) * this.bulletSpeed,
+                    size: 4
+                });
+                break;
+                
+            case 1: // Double shot
+                for(let i = 0; i < 2; i++) {
+                    const offsetAngle = angle + (i - 0.5) * 0.1;
+                    this.bullets.push({
+                        x: this.player.x + (i - 0.5) * 10,
+                        y: this.player.y,
+                        vx: Math.cos(offsetAngle) * this.bulletSpeed,
+                        vy: Math.sin(offsetAngle) * this.bulletSpeed,
+                        size: 4
+                    });
+                }
+                break;
+                
+            case 2: // Triple shot
+                for(let i = 0; i < 3; i++) {
+                    const offsetAngle = angle + (i - 1) * 0.15;
+                    this.bullets.push({
+                        x: this.player.x + (i - 1) * 8,
+                        y: this.player.y,
+                        vx: Math.cos(offsetAngle) * this.bulletSpeed,
+                        vy: Math.sin(offsetAngle) * this.bulletSpeed,
+                        size: 4
+                    });
+                }
+                break;
+                
+            case 3: // Spread shot (5 bullets)
+                for(let i = 0; i < 5; i++) {
+                    const offsetAngle = angle + (i - 2) * 0.3;
+                    this.bullets.push({
+                        x: this.player.x + (i - 2) * 6,
+                        y: this.player.y,
+                        vx: Math.cos(offsetAngle) * this.bulletSpeed,
+                        vy: Math.sin(offsetAngle) * this.bulletSpeed,
+                        size: 3
+                    });
+                }
+                break;
+        }
+    }
+    
+    checkUpgradeAvailable() {
+        if (this.score >= this.nextUpgradeScore && !this.upgradeAvailable) {
+            this.upgradeAvailable = true;
+            
+            // Randomly determine upgrade type and update button text
+            const willBeSlowMotion = Math.random() < 0.4;
+            const upgradeBtn = document.getElementById('upgradeWeapon');
+            
+            if (willBeSlowMotion) {
+                upgradeBtn.textContent = 'SLOW-MO ⏰';
+                upgradeBtn.style.background = 'linear-gradient(145deg, #00BFFF 0%, #0080FF 50%, #0040FF 100%)';
+            } else if (this.weaponLevel < 3) {
+                const weaponNames = ['DOUBLE SHOT 🔫', 'TRIPLE SHOT 🔫', 'SPREAD SHOT 🔫'];
+                upgradeBtn.textContent = weaponNames[this.weaponLevel] || 'UPGRADE ⚡';
+                upgradeBtn.style.background = 'linear-gradient(145deg, #FFD700 0%, #FFA500 50%, #FF8C00 100%)';
+            } else {
+                upgradeBtn.textContent = 'SLOW-MO ⏰';
+                upgradeBtn.style.background = 'linear-gradient(145deg, #00BFFF 0%, #0080FF 50%, #0040FF 100%)';
+            }
+            
+            document.getElementById('upgradeBtn').style.display = 'block';
+        }
+    }
+    
+    upgradeWeapon() {
+        if (!this.upgradeAvailable) return;
+        
+        // Random chance for slow-motion vs weapon upgrade
+        const useSlowMotion = Math.random() < 0.4; // 40% chance for slow-motion
+        
+        if (useSlowMotion) {
+            // Activate slow motion for 10 seconds
+            this.slowMotionActive = true;
+            this.slowMotionTimer = 600; // 10 seconds at 60fps
+        } else if (this.weaponLevel < 3) {
+            // Weapon upgrade
+            this.weaponLevel++;
+        }
+        
+        this.nextUpgradeScore += 150; // Next upgrade at +150 points
+        this.upgradeAvailable = false;
+        document.getElementById('upgradeBtn').style.display = 'none';
+        
+        // Play upgrade sound
+        this.playSound(this.sounds.dynamiteExplode);
+        
+        // Create upgrade particles
+        this.createUpgradeParticles();
+    }
+    
+    createUpgradeParticles() {
+        for (let i = 0; i < 20; i++) {
+            this.particles.push({
+                x: this.player.x,
+                y: this.player.y,
+                vx: (Math.random() - 0.5) * 10,
+                vy: (Math.random() - 0.5) * 10,
+                color: '#FFD700',
+                life: 40
+            });
+        }
+    }
+    
+    loseLife() {
+        this.lives--;
+        // Reset upgrades when life is lost
+        this.weaponLevel = 0;
+        this.nextUpgradeScore = Math.floor(this.score / 150) * 150 + 150;
+        this.upgradeAvailable = false;
+        this.slowMotionActive = false;
+        this.slowMotionTimer = 0;
+        document.getElementById('upgradeBtn').style.display = 'none';
+        
+        if (this.lives <= 0) {
+            this.gameOver();
+        }
     }
     
     createParticles(x, y, type) {
@@ -945,11 +1090,53 @@ class SweetShooter {
         // Clear canvas
         this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
         
+        // Add slow-motion visual effect
+        if (this.slowMotionActive) {
+            this.ctx.save();
+            this.ctx.fillStyle = 'rgba(0, 191, 255, 0.1)';
+            this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+            this.ctx.restore();
+        }
+        
         // Draw game objects
         this.drawSweets();
         this.drawBullets();
         this.drawParticles();
         this.drawPlayer();
+        
+        // Draw slow-motion timer
+        if (this.slowMotionActive) {
+            this.drawSlowMotionTimer();
+        }
+    }
+    
+    drawSlowMotionTimer() {
+        this.ctx.save();
+        
+        // Timer bar background
+        const barWidth = 200;
+        const barHeight = 8;
+        const barX = this.canvas.width / 2 - barWidth / 2;
+        const barY = 30;
+        
+        this.ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+        this.ctx.fillRect(barX, barY, barWidth, barHeight);
+        
+        // Timer bar fill
+        const fillWidth = (this.slowMotionTimer / 600) * barWidth;
+        const gradient = this.ctx.createLinearGradient(barX, 0, barX + barWidth, 0);
+        gradient.addColorStop(0, '#00BFFF');
+        gradient.addColorStop(1, '#0040FF');
+        this.ctx.fillStyle = gradient;
+        this.ctx.fillRect(barX, barY, fillWidth, barHeight);
+        
+        // Timer text
+        this.ctx.fillStyle = '#FFFFFF';
+        this.ctx.font = 'bold 14px Arial';
+        this.ctx.textAlign = 'center';
+        this.ctx.fillText('SLOW MOTION', this.canvas.width / 2, barY - 5);
+        
+        this.ctx.restore();
     }
     
     drawStartScreen() {
