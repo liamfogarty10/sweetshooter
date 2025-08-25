@@ -52,7 +52,7 @@ class SweetShooter {
         this.challengeType = null;
         this.challengeTargets = [];
         this.challengeTimer = 0;
-        this.challengeDuration = 1800; // 30 seconds at 60fps
+        this.challengeDuration = 1200; // 20 seconds at 60fps
         this.challengeReward = 500;
         this.challengeAvailable = true; // Always available
         
@@ -280,6 +280,17 @@ class SweetShooter {
         this.slowMotionActive = false;
         this.slowMotionTimer = 0;
         document.getElementById('upgradeBtn').style.display = 'none';
+        
+        // Reset shop system - lose all purchased sweets
+        this.purchasedSweets.clear();
+        this.shopAvailable = false;
+        document.getElementById('shopBtn').style.display = 'none';
+        
+        // Reset challenge system
+        this.challengeActive = false;
+        this.challengeType = null;
+        this.challengeTargets = [];
+        this.challengeTimer = 0;
         
         document.getElementById('startBtn').style.display = 'none';
         document.getElementById('pauseBtn').style.display = 'inline-block';
@@ -802,7 +813,7 @@ class SweetShooter {
             const sweet1Name = this.getSweetDisplayName(this.challengeTargets[0]);
             const sweet2Name = this.getSweetDisplayName(this.challengeTargets[1]);
             document.getElementById('challengeText').textContent = 
-                `Shoot only ${sweet1Name} and ${sweet2Name} for 30 seconds!`;
+                `Shoot only ${sweet1Name} and ${sweet2Name} for 20 seconds!`;
         } else {
             // Single target
             this.challengeTargets = [challengeTypes[Math.floor(Math.random() * challengeTypes.length)]];
@@ -810,7 +821,7 @@ class SweetShooter {
             
             const sweetName = this.getSweetDisplayName(this.challengeTargets[0]);
             document.getElementById('challengeText').textContent = 
-                `Shoot only ${sweetName} for 30 seconds!`;
+                `Shoot only ${sweetName} for 20 seconds!`;
         }
     }
     
