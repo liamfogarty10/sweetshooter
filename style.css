@@ -703,6 +703,15 @@ button:active {
     background: linear-gradient(145deg, #8A2BE2 0%, #7B68EE 50%, #9370DB 100%);
 }
 
+#challengeBtn {
+    background: linear-gradient(145deg, #FF4500 0%, #FF6347 50%, #FF7F50 100%);
+    border: 2px solid #FF4500;
+}
+
+#challengeBtn:hover {
+    background: linear-gradient(145deg, #FF6347 0%, #FF7F50 50%, #FF4500 100%);
+}
+
 /* Mobile responsive shop */
 @media (max-width: 768px) {
     .shop-content {
@@ -731,5 +740,118 @@ button:active {
     .shop-buy-btn {
         padding: 6px 12px;
         font-size: 0.8em;
+    }
+}
+
+/* Challenge System Styles */
+.challenge-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.9);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 25;
+    border-radius: 15px;
+}
+
+.challenge-content {
+    background: linear-gradient(135deg, rgba(255, 69, 0, 0.98), rgba(255, 99, 71, 0.95));
+    padding: 30px;
+    border-radius: 20px;
+    box-shadow: 
+        0 20px 60px rgba(255, 69, 0, 0.4),
+        0 8px 32px rgba(0, 0, 0, 0.2);
+    backdrop-filter: blur(20px);
+    border: 3px solid rgba(255, 69, 0, 0.5);
+    text-align: center;
+    max-width: 90%;
+    max-height: 90%;
+    overflow-y: auto;
+}
+
+.challenge-content h2 {
+    color: #FFFFFF;
+    margin-bottom: 20px;
+    font-size: clamp(1.5em, 4vw, 2.2em);
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+}
+
+#challengeDescription {
+    margin-bottom: 25px;
+}
+
+#challengeText {
+    color: #FFFFFF;
+    font-size: clamp(1.1em, 3vw, 1.4em);
+    font-weight: 700;
+    margin-bottom: 15px;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.7);
+}
+
+.challenge-reward {
+    color: #FFD700;
+    font-size: clamp(1em, 2.5vw, 1.2em);
+    font-weight: 900;
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
+    background: rgba(255, 215, 0, 0.2);
+    padding: 8px 16px;
+    border-radius: 15px;
+    border: 2px solid rgba(255, 215, 0, 0.5);
+    display: inline-block;
+}
+
+.challenge-buttons {
+    display: flex;
+    gap: 15px;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+.challenge-buttons button {
+    background: linear-gradient(145deg, #32CD32 0%, #228B22 50%, #006400 100%);
+    border: none;
+    color: white;
+    padding: 12px 24px;
+    font-size: 1em;
+    font-weight: 700;
+    border-radius: 25px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 6px 20px rgba(50, 205, 50, 0.4);
+    min-width: 120px;
+}
+
+.challenge-buttons button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(50, 205, 50, 0.5);
+}
+
+#challengeDecline {
+    background: linear-gradient(145deg, #DC143C 0%, #B22222 50%, #8B0000 100%) !important;
+    box-shadow: 0 6px 20px rgba(220, 20, 60, 0.4) !important;
+}
+
+#challengeDecline:hover {
+    box-shadow: 0 8px 25px rgba(220, 20, 60, 0.5) !important;
+}
+
+/* Mobile responsive challenge */
+@media (max-width: 768px) {
+    .challenge-content {
+        padding: 20px;
+        max-width: 95%;
+    }
+    
+    .challenge-buttons {
+        flex-direction: column;
+        align-items: center;
+    }
+    
+    .challenge-buttons button {
+        min-width: 150px;
     }
 }

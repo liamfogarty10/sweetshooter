@@ -30,6 +30,7 @@
                 <button id="startBtn">Start Game</button>
                 <button id="pauseBtn" style="display: none;">Pause</button>
                 <button id="shopBtn" style="display: none;">SHOP 🛒</button>
+                <button id="challengeBtn" style="display: none;">CHALLENGE 🎯</button>
             </div>
             
             <!-- Upgrade Button -->
@@ -81,6 +82,21 @@
                         </div>
                     </div>
                     <button id="shopClose">Close Shop</button>
+                </div>
+            </div>
+            
+            <!-- Challenge Overlay -->
+            <div id="challengeOverlay" class="challenge-overlay" style="display: none;">
+                <div class="challenge-content">
+                    <h2>Challenge Mode 🎯</h2>
+                    <div id="challengeDescription">
+                        <p id="challengeText">Shoot only cookies for 30 seconds!</p>
+                        <p class="challenge-reward">Reward: 500 points</p>
+                    </div>
+                    <div class="challenge-buttons">
+                        <button id="challengeAccept">Accept Challenge</button>
+                        <button id="challengeDecline">Maybe Later</button>
+                    </div>
                 </div>
             </div>
             

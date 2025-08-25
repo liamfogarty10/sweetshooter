@@ -47,6 +47,15 @@ class SweetShooter {
         this.purchasedSweets = new Set(); // Track purchased sweets
         this.availableSweets = ['lollipop', 'jellybean', 'gummybear', 'candycane', 'donut', 'cupcake'];
         
+        // Challenge system
+        this.challengeActive = false;
+        this.challengeType = null;
+        this.challengeTargets = [];
+        this.challengeTimer = 0;
+        this.challengeDuration = 1800; // 30 seconds at 60fps
+        this.challengeReward = 500;
+        this.challengeAvailable = true; // Always available
+        
         // Enhanced sound effects with better reliability
         this.audioContext = null;
         this.sounds = {};
@@ -133,6 +142,11 @@ class SweetShooter {
         document.getElementById('upgradeWeapon').addEventListener('click', () => this.upgradeWeapon());
         document.getElementById('shopBtn').addEventListener('click', () => this.openShop());
         document.getElementById('shopClose').addEventListener('click', () => this.closeShop());
+        
+        // Challenge system events
+        document.getElementById('challengeBtn').addEventListener('click', () => this.openChallenge());
+        document.getElementById('challengeAccept').addEventListener('click', () => this.acceptChallenge());
+        document.getElementById('challengeDecline').addEventListener('click', () => this.declineChallenge());
         
         // Shop buy buttons
         document.querySelectorAll('.shop-buy-btn').forEach(btn => {
@@ -269,6 +283,7 @@ class SweetShooter {
         
         document.getElementById('startBtn').style.display = 'none';
         document.getElementById('pauseBtn').style.display = 'inline-block';
+        document.getElementById('challengeBtn').style.display = 'inline-block';
         document.getElementById('gameOver').style.display = 'none';
         
         this.spawnWave();
@@ -410,6 +425,14 @@ class SweetShooter {
                         this.sweets = [];
                         this.score += 100;
                     } else {
+                        // Check challenge logic before processing hit
+                        if (this.challengeActive) {
+                            if (!this.checkChallengeSuccess(sweet.type)) {
+                                // Shot wrong sweet type - fail challenge
+                                this.failChallenge();
+                            }
+                        }
+                        
                         sweet.health--;
                         if (sweet.health <= 0) {
                             // Play sweet-specific sound
@@ -497,6 +520,14 @@ class SweetShooter {
         
         // Check for shop availability
         this.checkShopAvailable();
+        
+        // Update challenge timer
+        if (this.challengeActive) {
+            this.challengeTimer--;
+            if (this.challengeTimer <= 0) {
+                this.completeChallenge();
+            }
+        }
         
         this.updateUI();
     }
@@ -708,6 +739,149 @@ class SweetShooter {
             cupcake: 30
         };
         return pointValues[sweetType] || 10;
+    }
+    
+    // Challenge System Methods
+    openChallenge() {
+        if (this.challengeActive) return;
+        
+        this.generateRandomChallenge();
+        document.getElementById('challengeOverlay').style.display = 'flex';
+    }
+    
+    generateRandomChallenge() {
+        // Get available sweet types (basic + purchased)
+        const availableTypes = ['cookie', 'marshmallow', 'cake'];
+        this.purchasedSweets.forEach(type => availableTypes.push(type));
+        
+        // Remove dynamite from challenges
+        const challengeTypes = availableTypes.filter(type => type !== 'dynamite');
+        
+        // Decide if single or double target challenge
+        const isDoubleTarget = Math.random() < 0.3; // 30% chance for double target
+        
+        if (isDoubleTarget && challengeTypes.length >= 2) {
+            // Two targets
+            const shuffled = [...challengeTypes].sort(() => Math.random() - 0.5);
+            this.challengeTargets = shuffled.slice(0, 2);
+            this.challengeType = 'multi';
+            
+            const sweet1Name = this.getSweetDisplayName(this.challengeTargets[0]);
+            const sweet2Name = this.getSweetDisplayName(this.challengeTargets[1]);
+            document.getElementById('challengeText').textContent = 
+                `Shoot only ${sweet1Name} and ${sweet2Name} for 30 seconds!`;
+        } else {
+            // Single target
+            this.challengeTargets = [challengeTypes[Math.floor(Math.random() * challengeTypes.length)]];
+            this.challengeType = 'single';
+            
+            const sweetName = this.getSweetDisplayName(this.challengeTargets[0]);
+            document.getElementById('challengeText').textContent = 
+                `Shoot only ${sweetName} for 30 seconds!`;
+        }
+    }
+    
+    getSweetDisplayName(sweetType) {
+        const names = {
+            cookie: 'Cookies',
+            marshmallow: 'Marshmallows', 
+            cake: 'Cakes',
+            lollipop: 'Lollipops',
+            jellybean: 'Jelly Beans',
+            gummybear: 'Gummy Bears',
+            candycane: 'Candy Canes',
+            donut: 'Donuts',
+            cupcake: 'Cupcakes'
+        };
+        return names[sweetType] || sweetType;
+    }
+    
+    acceptChallenge() {
+        document.getElementById('challengeOverlay').style.display = 'none';
+        this.challengeActive = true;
+        this.challengeTimer = this.challengeDuration;
+        
+        // Play challenge start sound
+        this.playSound('upgradeReady', 0.5);
+    }
+    
+    declineChallenge() {
+        document.getElementById('challengeOverlay').style.display = 'none';
+        this.challengeType = null;
+        this.challengeTargets = [];
+    }
+    
+    checkChallengeSuccess(sweetType) {
+        if (!this.challengeActive) return false;
+        
+        // Check if shot sweet is a valid target
+        return this.challengeTargets.includes(sweetType);
+    }
+    
+    failChallenge() {
+        this.challengeActive = false;
+        this.challengeTimer = 0;
+        this.challengeType = null;
+        this.challengeTargets = [];
+        
+        // Play failure sound
+        this.playSound('gameOver', 0.3);
+    }
+    
+    completeChallenge() {
+        this.challengeActive = false;
+        this.challengeTimer = 0;
+        this.score += this.challengeReward;
+        this.challengeType = null;
+        this.challengeTargets = [];
+        
+        // Play success sound and create particles
+        this.playSound('upgradeActivate', 0.7);
+        this.createUpgradeParticles();
+        this.updateUI();
+    }
+    
+    drawChallengeTimer() {
+        if (!this.challengeActive) return;
+        
+        this.ctx.save();
+        
+        // Timer bar background
+        const barWidth = 250;
+        const barHeight = 12;
+        const barX = this.canvas.width / 2 - barWidth / 2;
+        const barY = 60;
+        
+        this.ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+        this.ctx.fillRect(barX - 2, barY - 2, barWidth + 4, barHeight + 4);
+        
+        // Timer bar fill
+        const fillWidth = (this.challengeTimer / this.challengeDuration) * barWidth;
+        const gradient = this.ctx.createLinearGradient(barX, 0, barX + barWidth, 0);
+        gradient.addColorStop(0, '#FF4500');
+        gradient.addColorStop(0.5, '#FF6347');
+        gradient.addColorStop(1, '#FF7F50');
+        this.ctx.fillStyle = gradient;
+        this.ctx.fillRect(barX, barY, fillWidth, barHeight);
+        
+        // Timer text
+        this.ctx.fillStyle = '#FFFFFF';
+        this.ctx.font = 'bold 16px Arial';
+        this.ctx.textAlign = 'center';
+        this.ctx.strokeStyle = '#000000';
+        this.ctx.lineWidth = 3;
+        this.ctx.strokeText('CHALLENGE MODE', this.canvas.width / 2, barY - 8);
+        this.ctx.fillText('CHALLENGE MODE', this.canvas.width / 2, barY - 8);
+        
+        // Challenge description
+        this.ctx.font = 'bold 12px Arial';
+        const targetText = this.challengeType === 'multi' ? 
+            `${this.getSweetDisplayName(this.challengeTargets[0])} & ${this.getSweetDisplayName(this.challengeTargets[1])}` :
+            this.getSweetDisplayName(this.challengeTargets[0]);
+        this.ctx.strokeText(`Target: ${targetText}`, this.canvas.width / 2, barY + barHeight + 18);
+        this.ctx.fillText(`Target: ${targetText}`, this.canvas.width / 2, barY + barHeight + 18);
+        
+        this.ctx.restore();
     }
     
     createParticles(x, y, type) {
@@ -1480,6 +1654,11 @@ class SweetShooter {
         // Draw slow-motion timer
         if (this.slowMotionActive) {
             this.drawSlowMotionTimer();
+        }
+        
+        // Draw challenge timer
+        if (this.challengeActive) {
+            this.drawChallengeTimer();
         }
     }
     
