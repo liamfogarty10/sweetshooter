@@ -41,6 +41,12 @@ class SweetShooter {
         // Canvas bounds for collision detection
         this.canvasBounds = { width: 800, height: 600, playableMargin: 30 };
         
+        // Shop system
+        this.shopAvailable = false;
+        this.shopOpen = false;
+        this.purchasedSweets = new Set(); // Track purchased sweets
+        this.availableSweets = ['lollipop', 'jellybean', 'gummybear', 'candycane', 'donut', 'cupcake'];
+        
         // Enhanced sound effects with better reliability
         this.audioContext = null;
         this.sounds = {};
@@ -125,6 +131,13 @@ class SweetShooter {
         document.getElementById('pauseBtn').addEventListener('click', () => this.pauseGame());
         document.getElementById('restartBtn').addEventListener('click', () => this.restartGame());
         document.getElementById('upgradeWeapon').addEventListener('click', () => this.upgradeWeapon());
+        document.getElementById('shopBtn').addEventListener('click', () => this.openShop());
+        document.getElementById('shopClose').addEventListener('click', () => this.closeShop());
+        
+        // Shop buy buttons
+        document.querySelectorAll('.shop-buy-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => this.buySweet(e.target.dataset.sweet));
+        });
         
         // Mouse events
         this.canvas.addEventListener('click', (e) => this.handleShoot(e));
@@ -310,11 +323,16 @@ class SweetShooter {
     }
     
     spawnSweet() {
-        const types = ['cookie', 'marshmallow', 'cake'];
+        let types = ['cookie', 'marshmallow', 'cake'];
+        
+        // Add purchased sweets to spawn pool
+        this.purchasedSweets.forEach(sweetType => {
+            types.push(sweetType);
+        });
         
         // Early waves have more cookies and marshmallows (easier)
         let type;
-        if (this.wave <= 2) {
+        if (this.wave <= 2 && !this.purchasedSweets.size) {
             type = Math.random() < 0.8 ? (Math.random() < 0.5 ? 'cookie' : 'marshmallow') : 'cake';
         } else {
             type = types[Math.floor(Math.random() * types.length)];
@@ -405,8 +423,7 @@ class SweetShooter {
                             
                             this.createParticles(sweet.x, sweet.y, sweet.type);
                             this.sweets.splice(j, 1);
-                            this.score += sweet.type === 'cake' ? 30 : 
-                                         sweet.type === 'cookie' ? 10 : 15;
+                            this.score += this.getSweetPoints(sweet.type);
                         }
                     }
                     break;
@@ -477,6 +494,9 @@ class SweetShooter {
         
         // Check for upgrade availability
         this.checkUpgradeAvailable();
+        
+        // Check for shop availability
+        this.checkShopAvailable();
         
         this.updateUI();
     }
@@ -604,6 +624,89 @@ class SweetShooter {
         if (this.lives <= 0) {
             this.gameOver();
         }
+    }
+    
+    checkShopAvailable() {
+        if (this.score >= 200 && !this.shopAvailable) {
+            this.shopAvailable = true;
+            document.getElementById('shopBtn').style.display = 'inline-block';
+            this.playSound('upgradeReady', 0.4); // Shop available sound
+        }
+    }
+    
+    openShop() {
+        if (!this.shopAvailable || this.shopOpen) return;
+        
+        this.shopOpen = true;
+        this.gameRunning = false; // Pause game
+        document.getElementById('shopOverlay').style.display = 'flex';
+        
+        // Update shop UI
+        this.updateShopUI();
+    }
+    
+    closeShop() {
+        this.shopOpen = false;
+        document.getElementById('shopOverlay').style.display = 'none';
+        
+        // Resume game if it was running
+        if (this.lives > 0 && this.sweets.length > 0) {
+            this.gameRunning = true;
+            this.gameLoop();
+        }
+    }
+    
+    updateShopUI() {
+        document.querySelectorAll('.shop-buy-btn').forEach(btn => {
+            const sweetType = btn.dataset.sweet;
+            const cost = 100;
+            
+            if (this.purchasedSweets.has(sweetType)) {
+                btn.textContent = 'Purchased';
+                btn.classList.add('purchased');
+                btn.disabled = true;
+            } else if (this.score < cost) {
+                btn.disabled = true;
+                btn.textContent = `Need ${cost}pts`;
+            } else {
+                btn.disabled = false;
+                btn.textContent = `Buy (${cost}pts)`;
+            }
+        });
+    }
+    
+    buySweet(sweetType) {
+        const cost = 100;
+        
+        if (this.score < cost || this.purchasedSweets.has(sweetType)) return;
+        
+        this.score -= cost;
+        this.purchasedSweets.add(sweetType);
+        
+        // Play purchase sound
+        this.playSound('upgradeActivate', 0.6);
+        
+        // Update shop UI
+        this.updateShopUI();
+        this.updateUI();
+        
+        // Create purchase particles
+        this.createUpgradeParticles();
+    }
+    
+    getSweetPoints(sweetType) {
+        const pointValues = {
+            cookie: 10,
+            marshmallow: 15,
+            cake: 30,
+            lollipop: 20,
+            jellybean: 18,
+            gummybear: 22,
+            candycane: 25,
+            donut: 28,
+            cupcake: 30
+        };
+        return pointValues[sweetType] || 10;
     }
     
     createParticles(x, y, type) {
@@ -1056,6 +1159,238 @@ class SweetShooter {
                     this.ctx.font = 'bold 8px Arial';
                     this.ctx.fillText('⚠', -sweet.size/3, -5);
                     this.ctx.fillText('⚠', sweet.size/3, -5);
+                    break;
+                    
+                case 'lollipop':
+                    // Lollipop shadow
+                    this.ctx.shadowColor = 'rgba(0, 0, 0, 0.3)';
+                    this.ctx.shadowBlur = 8;
+                    this.ctx.shadowOffsetX = 3;
+                    this.ctx.shadowOffsetY = 3;
+                    
+                    // Lollipop candy (circle)
+                    const lollipopGradient = this.ctx.createRadialGradient(0, -5, 0, 0, -5, sweet.size/2.5);
+                    lollipopGradient.addColorStop(0, '#FF69B4');
+                    lollipopGradient.addColorStop(0.5, '#FF1493');
+                    lollipopGradient.addColorStop(1, '#DC143C');
+                    this.ctx.fillStyle = lollipopGradient;
+                    this.ctx.beginPath();
+                    this.ctx.arc(0, -5, sweet.size/2.5, 0, Math.PI * 2);
+                    this.ctx.fill();
+                    
+                    // Lollipop stick
+                    this.ctx.shadowColor = 'transparent';
+                    this.ctx.fillStyle = '#DDD';
+                    this.ctx.fillRect(-2, sweet.size/4, 4, sweet.size/2);
+                    
+                    // Candy highlight
+                    this.ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
+                    this.ctx.beginPath();
+                    this.ctx.arc(-3, -8, 4, 0, Math.PI * 2);
+                    this.ctx.fill();
+                    break;
+                    
+                case 'jellybean':
+                    // Jellybean shadow
+                    this.ctx.shadowColor = 'rgba(0, 0, 0, 0.3)';
+                    this.ctx.shadowBlur = 6;
+                    this.ctx.shadowOffsetX = 2;
+                    this.ctx.shadowOffsetY = 2;
+                    
+                    // Jellybean body (oval)
+                    const jellybeanGradient = this.ctx.createLinearGradient(-sweet.size/3, -sweet.size/3, sweet.size/3, sweet.size/3);
+                    jellybeanGradient.addColorStop(0, '#32CD32');
+                    jellybeanGradient.addColorStop(0.5, '#228B22');
+                    jellybeanGradient.addColorStop(1, '#006400');
+                    this.ctx.fillStyle = jellybeanGradient;
+                    this.ctx.beginPath();
+                    this.ctx.ellipse(0, 0, sweet.size/3, sweet.size/2.2, 0, 0, Math.PI * 2);
+                    this.ctx.fill();
+                    
+                    // Jellybean shine
+                    this.ctx.shadowColor = 'transparent';
+                    this.ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
+                    this.ctx.beginPath();
+                    this.ctx.ellipse(-sweet.size/6, -sweet.size/6, sweet.size/8, sweet.size/5, 0, 0, Math.PI * 2);
+                    this.ctx.fill();
+                    break;
+                    
+                case 'gummybear':
+                    // Gummy bear shadow
+                    this.ctx.shadowColor = 'rgba(0, 0, 0, 0.3)';
+                    this.ctx.shadowBlur = 8;
+                    this.ctx.shadowOffsetX = 3;
+                    this.ctx.shadowOffsetY = 3;
+                    
+                    // Gummy bear body
+                    const gummyGradient = this.ctx.createRadialGradient(0, 0, 0, 0, 0, sweet.size/2);
+                    gummyGradient.addColorStop(0, '#FFD700');
+                    gummyGradient.addColorStop(0.6, '#FFA500');
+                    gummyGradient.addColorStop(1, '#FF8C00');
+                    this.ctx.fillStyle = gummyGradient;
+                    
+                    // Bear head (circle)
+                    this.ctx.beginPath();
+                    this.ctx.arc(0, -2, sweet.size/3, 0, Math.PI * 2);
+                    this.ctx.fill();
+                    
+                    // Bear body (oval)
+                    this.ctx.beginPath();
+                    this.ctx.ellipse(0, sweet.size/4, sweet.size/2.5, sweet.size/2, 0, 0, Math.PI * 2);
+                    this.ctx.fill();
+                    
+                    // Bear ears
+                    this.ctx.beginPath();
+                    this.ctx.arc(-sweet.size/4, -sweet.size/3, sweet.size/8, 0, Math.PI * 2);
+                    this.ctx.arc(sweet.size/4, -sweet.size/3, sweet.size/8, 0, Math.PI * 2);
+                    this.ctx.fill();
+                    
+                    // Bear face
+                    this.ctx.shadowColor = 'transparent';
+                    this.ctx.fillStyle = '#000';
+                    this.ctx.beginPath();
+                    this.ctx.arc(-sweet.size/8, -sweet.size/12, 1, 0, Math.PI * 2); // Left eye
+                    this.ctx.arc(sweet.size/8, -sweet.size/12, 1, 0, Math.PI * 2); // Right eye
+                    this.ctx.fill();
+                    this.ctx.beginPath();
+                    this.ctx.arc(0, sweet.size/12, 1.5, 0, Math.PI * 2); // Nose
+                    this.ctx.fill();
+                    break;
+                    
+                case 'candycane':
+                    // Candy cane shadow
+                    this.ctx.shadowColor = 'rgba(0, 0, 0, 0.3)';
+                    this.ctx.shadowBlur = 8;
+                    this.ctx.shadowOffsetX = 3;
+                    this.ctx.shadowOffsetY = 3;
+                    
+                    // Candy cane base (white)
+                    this.ctx.strokeStyle = '#FFFFFF';
+                    this.ctx.lineWidth = 8;
+                    this.ctx.lineCap = 'round';
+                    this.ctx.beginPath();
+                    this.ctx.arc(0, -sweet.size/4, sweet.size/4, Math.PI, 0);
+                    this.ctx.moveTo(sweet.size/4, -sweet.size/4);
+                    this.ctx.lineTo(sweet.size/4, sweet.size/3);
+                    this.ctx.stroke();
+                    
+                    // Candy cane stripes (red)
+                    this.ctx.shadowColor = 'transparent';
+                    this.ctx.strokeStyle = '#DC143C';
+                    this.ctx.lineWidth = 3;
+                    
+                    // Curved stripes
+                    for(let i = 0; i < 3; i++) {
+                        this.ctx.beginPath();
+                        this.ctx.arc(0, -sweet.size/4, sweet.size/4, Math.PI + i * 0.3, Math.PI + (i + 0.5) * 0.3);
+                        this.ctx.stroke();
+                    }
+                    
+                    // Straight stripes
+                    for(let i = 0; i < 4; i++) {
+                        this.ctx.beginPath();
+                        this.ctx.moveTo(sweet.size/4, -sweet.size/6 + i * 6);
+                        this.ctx.lineTo(sweet.size/4, -sweet.size/6 + i * 6 + 3);
+                        this.ctx.stroke();
+                    }
+                    break;
+                    
+                case 'donut':
+                    // Donut shadow
+                    this.ctx.shadowColor = 'rgba(0, 0, 0, 0.4)';
+                    this.ctx.shadowBlur = 10;
+                    this.ctx.shadowOffsetX = 4;
+                    this.ctx.shadowOffsetY = 4;
+                    
+                    // Donut base
+                    const donutGradient = this.ctx.createRadialGradient(0, 0, 0, 0, 0, sweet.size/2);
+                    donutGradient.addColorStop(0, '#DEB887');
+                    donutGradient.addColorStop(0.6, '#D2B48C');
+                    donutGradient.addColorStop(1, '#CD853F');
+                    this.ctx.fillStyle = donutGradient;
+                    this.ctx.beginPath();
+                    this.ctx.arc(0, 0, sweet.size/2, 0, Math.PI * 2);
+                    this.ctx.fill();
+                    
+                    // Donut hole
+                    this.ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
+                    this.ctx.beginPath();
+                    this.ctx.arc(0, 0, sweet.size/5, 0, Math.PI * 2);
+                    this.ctx.fill();
+                    
+                    // Chocolate glaze
+                    this.ctx.shadowColor = 'transparent';
+                    const glazeGradient = this.ctx.createRadialGradient(0, -2, 0, 0, -2, sweet.size/2.5);
+                    glazeGradient.addColorStop(0, '#8B4513');
+                    glazeGradient.addColorStop(0.8, '#654321');
+                    glazeGradient.addColorStop(1, '#4A2C2A');
+                    this.ctx.fillStyle = glazeGradient;
+                    this.ctx.beginPath();
+                    this.ctx.arc(0, -2, sweet.size/2.5, 0, Math.PI * 2);
+                    this.ctx.fill();
+                    
+                    // Sprinkles
+                    const sprinkleColors = ['#FF69B4', '#00FF00', '#FFD700', '#FF4500', '#9370DB'];
+                    for(let i = 0; i < 8; i++) {
+                        const angle = (i / 8) * Math.PI * 2;
+                        const x = Math.cos(angle) * (sweet.size/4 + Math.random() * 4);
+                        const y = Math.sin(angle) * (sweet.size/4 + Math.random() * 4);
+                        this.ctx.strokeStyle = sprinkleColors[Math.floor(Math.random() * sprinkleColors.length)];
+                        this.ctx.lineWidth = 2;
+                        this.ctx.beginPath();
+                        this.ctx.moveTo(x - 2, y);
+                        this.ctx.lineTo(x + 2, y);
+                        this.ctx.stroke();
+                    }
+                    break;
+                    
+                case 'cupcake':
+                    // Cupcake shadow
+                    this.ctx.shadowColor = 'rgba(0, 0, 0, 0.4)';
+                    this.ctx.shadowBlur = 10;
+                    this.ctx.shadowOffsetX = 4;
+                    this.ctx.shadowOffsetY = 4;
+                    
+                    // Cupcake base (wrapper)
+                    const wrapperGradient = this.ctx.createLinearGradient(-sweet.size/2.5, sweet.size/4, sweet.size/2.5, sweet.size/2);
+                    wrapperGradient.addColorStop(0, '#8B4513');
+                    wrapperGradient.addColorStop(0.5, '#654321');
+                    wrapperGradient.addColorStop(1, '#4A2C2A');
+                    this.ctx.fillStyle = wrapperGradient;
+                    this.ctx.beginPath();
+                    this.ctx.moveTo(-sweet.size/2.5, sweet.size/4);
+                    this.ctx.lineTo(sweet.size/2.5, sweet.size/4);
+                    this.ctx.lineTo(sweet.size/3, sweet.size/2);
+                    this.ctx.lineTo(-sweet.size/3, sweet.size/2);
+                    this.ctx.closePath();
+                    this.ctx.fill();
+                    
+                    // Cupcake frosting
+                    this.ctx.shadowColor = 'transparent';
+                    const frostingColors = this.ctx.createRadialGradient(0, -sweet.size/4, 0, 0, -sweet.size/4, sweet.size/2.5);
+                    frostingColors.addColorStop(0, '#FFE4E1');
+                    frostingColors.addColorStop(0.5, '#FFB6C1');
+                    frostingColors.addColorStop(1, '#FF69B4');
+                    this.ctx.fillStyle = frostingColors;
+                    
+                    // Frosting swirl
+                    this.ctx.beginPath();
+                    this.ctx.arc(0, -sweet.size/4, sweet.size/2.5, 0, Math.PI * 2);
+                    this.ctx.fill();
+                    
+                    // Cherry on top
+                    this.ctx.fillStyle = '#DC143C';
+                    this.ctx.beginPath();
+                    this.ctx.arc(0, -sweet.size/2 + 2, 4, 0, Math.PI * 2);
+                    this.ctx.fill();
+                    
+                    // Cherry stem
+                    this.ctx.strokeStyle = '#228B22';
+                    this.ctx.lineWidth = 2;
+                    this.ctx.beginPath();
+                    this.ctx.moveTo(0, -sweet.size/2 - 2);
+                    this.ctx.lineTo(1, -sweet.size/2 - 6);
+                    this.ctx.stroke();
                     break;
             }
             

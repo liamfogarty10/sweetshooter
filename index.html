@@ -6,12 +6,12 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="mobile-web-app-capable" content="yes">
-    <title>Aoife and Aine's Sweet Shooter</title>
+    <title>Aoife & Aine's Sweet Shooter</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <div class="game-container">
-        <h1>Aoife and Annes Sweet Shooter</h1>
+        <h1>Aoife & Aine's Sweet Shooter</h1>
         
         <div class="game-area">
             <canvas id="gameCanvas" width="800" height="600"></canvas>
@@ -29,11 +29,59 @@
             <div class="game-controls">
                 <button id="startBtn">Start Game</button>
                 <button id="pauseBtn" style="display: none;">Pause</button>
+                <button id="shopBtn" style="display: none;">SHOP 🛒</button>
             </div>
             
             <!-- Upgrade Button -->
             <div id="upgradeBtn" class="upgrade-button" style="display: none;">
                 <button id="upgradeWeapon">UPGRADE ⚡</button>
+            </div>
+            
+            <!-- Shop Overlay -->
+            <div id="shopOverlay" class="shop-overlay" style="display: none;">
+                <div class="shop-content">
+                    <h2>Sweet Shop 🍭</h2>
+                    <p>Purchase new sweets to add to the game! Each costs 100 points.</p>
+                    <div class="shop-grid">
+                        <div class="shop-item" data-sweet="lollipop">
+                            <div class="sweet-preview" id="preview-lollipop">🍭</div>
+                            <h3>Lollipop</h3>
+                            <p>20 points</p>
+                            <button class="shop-buy-btn" data-sweet="lollipop">Buy (100pts)</button>
+                        </div>
+                        <div class="shop-item" data-sweet="jellybean">
+                            <div class="sweet-preview" id="preview-jellybean">🫘</div>
+                            <h3>Jelly Bean</h3>
+                            <p>18 points</p>
+                            <button class="shop-buy-btn" data-sweet="jellybean">Buy (100pts)</button>
+                        </div>
+                        <div class="shop-item" data-sweet="gummybear">
+                            <div class="sweet-preview" id="preview-gummybear">🐻</div>
+                            <h3>Gummy Bear</h3>
+                            <p>22 points</p>
+                            <button class="shop-buy-btn" data-sweet="gummybear">Buy (100pts)</button>
+                        </div>
+                        <div class="shop-item" data-sweet="candycane">
+                            <div class="sweet-preview" id="preview-candycane">🍬</div>
+                            <h3>Candy Cane</h3>
+                            <p>25 points</p>
+                            <button class="shop-buy-btn" data-sweet="candycane">Buy (100pts)</button>
+                        </div>
+                        <div class="shop-item" data-sweet="donut">
+                            <div class="sweet-preview" id="preview-donut">🍩</div>
+                            <h3>Donut</h3>
+                            <p>28 points</p>
+                            <button class="shop-buy-btn" data-sweet="donut">Buy (100pts)</button>
+                        </div>
+                        <div class="shop-item" data-sweet="cupcake">
+                            <div class="sweet-preview" id="preview-cupcake">🧁</div>
+                            <h3>Cupcake</h3>
+                            <p>30 points</p>
+                            <button class="shop-buy-btn" data-sweet="cupcake">Buy (100pts)</button>
+                        </div>
+                    </div>
+                    <button id="shopClose">Close Shop</button>
+                </div>
             </div>
             
             <!-- Game Over Overlay -->
