@@ -7,6 +7,8 @@ class SweetShooter {
         this.wave = 1;
         this.lives = 3;
         
+        this.setupCanvas();
+        
         // Player character
         this.player = {
             x: this.canvas.width / 2,
@@ -30,13 +32,111 @@ class SweetShooter {
         this.drawStartScreen();
     }
     
+    setupCanvas() {
+        const container = this.canvas.parentElement;
+        const containerWidth = container.clientWidth - 40; // Account for padding
+        const containerHeight = window.innerHeight * 0.6; // 60% of viewport height
+        
+        // Set responsive canvas size
+        const maxWidth = 800;
+        const maxHeight = 600;
+        const aspectRatio = maxWidth / maxHeight;
+        
+        let canvasWidth, canvasHeight;
+        
+        if (containerWidth / containerHeight > aspectRatio) {
+            // Container is wider than aspect ratio
+            canvasHeight = Math.min(containerHeight, maxHeight);
+            canvasWidth = canvasHeight * aspectRatio;
+        } else {
+            // Container is taller than aspect ratio
+            canvasWidth = Math.min(containerWidth, maxWidth);
+            canvasHeight = canvasWidth / aspectRatio;
+        }
+        
+        // Ensure minimum size for playability
+        canvasWidth = Math.max(320, canvasWidth);
+        canvasHeight = Math.max(240, canvasHeight);
+        
+        this.canvas.width = canvasWidth;
+        this.canvas.height = canvasHeight;
+        this.canvas.style.width = canvasWidth + 'px';
+        this.canvas.style.height = canvasHeight + 'px';
+        
+        // Update player position based on new canvas size
+        if (this.player) {
+            this.player.x = this.canvas.width / 2;
+            this.player.y = this.canvas.height - 100;
+        }
+    }
+    
     bindEvents() {
         document.getElementById('startBtn').addEventListener('click', () => this.startGame());
         document.getElementById('pauseBtn').addEventListener('click', () => this.pauseGame());
         document.getElementById('restartBtn').addEventListener('click', () => this.restartGame());
         
+        // Mouse events
         this.canvas.addEventListener('click', (e) => this.handleShoot(e));
         this.canvas.addEventListener('mousemove', (e) => this.handleMouseMove(e));
+        
+        // Touch events for mobile
+        this.canvas.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            this.handleTouchShoot(e);
+        });
+        this.canvas.addEventListener('touchmove', (e) => {
+            e.preventDefault();
+            this.handleTouchMove(e);
+        });
+        
+        // Window resize event
+        window.addEventListener('resize', () => {
+            this.setupCanvas();
+            if (!this.gameRunning) {
+                this.drawStartScreen();
+            }
+        });
+        
+        // Prevent zoom on double tap (iOS Safari)
+        this.canvas.addEventListener('touchend', (e) => {
+            e.preventDefault();
+        });
+    }
+    
+    handleTouchMove(e) {
+        if (!this.gameRunning) return;
+        
+        const rect = this.canvas.getBoundingClientRect();
+        const touch = e.touches[0];
+        const touchX = touch.clientX - rect.left;
+        const touchY = touch.clientY - rect.top;
+        
+        // Calculate angle from player to touch
+        const dx = touchX - this.player.x;
+        const dy = touchY - this.player.y;
+        this.player.angle = Math.atan2(dy, dx);
+    }
+    
+    handleTouchShoot(e) {
+        if (!this.gameRunning) return;
+        
+        const rect = this.canvas.getBoundingClientRect();
+        const touch = e.touches[0];
+        const targetX = touch.clientX - rect.left;
+        const targetY = touch.clientY - rect.top;
+        
+        // Create bullet
+        const angle = Math.atan2(targetY - this.player.y, targetX - this.player.x);
+        this.bullets.push({
+            x: this.player.x,
+            y: this.player.y,
+            vx: Math.cos(angle) * this.bulletSpeed,
+            vy: Math.sin(angle) * this.bulletSpeed,
+            size: 4
+        });
+        
+        // Update player angle
+        this.player.angle = angle;
     }
     
     handleMouseMove(e) {
@@ -272,38 +372,141 @@ class SweetShooter {
         this.ctx.save();
         this.ctx.translate(this.player.x, this.player.y);
         
-        // Draw girl character with red hair
-        // Body
-        this.ctx.fillStyle = '#FFC0CB';
-        this.ctx.fillRect(-15, -20, 30, 40);
+        // Add shadow
+        this.ctx.shadowColor = 'rgba(0, 0, 0, 0.3)';
+        this.ctx.shadowBlur = 8;
+        this.ctx.shadowOffsetX = 3;
+        this.ctx.shadowOffsetY = 3;
         
-        // Head
+        // Body (dress)
+        const bodyGradient = this.ctx.createLinearGradient(-15, -20, 15, 20);
+        bodyGradient.addColorStop(0, '#FFB6C1');
+        bodyGradient.addColorStop(0.5, '#FF69B4');
+        bodyGradient.addColorStop(1, '#FF1493');
+        this.ctx.fillStyle = bodyGradient;
+        this.ctx.fillRect(-18, -25, 36, 50);
+        
+        // Body outline
+        this.ctx.strokeStyle = '#C71585';
+        this.ctx.lineWidth = 2;
+        this.ctx.strokeRect(-18, -25, 36, 50);
+        
+        // Arms
         this.ctx.fillStyle = '#FDBCB4';
         this.ctx.beginPath();
-        this.ctx.arc(0, -35, 15, 0, Math.PI * 2);
+        this.ctx.arc(-20, -10, 8, 0, Math.PI * 2);
+        this.ctx.arc(20, -10, 8, 0, Math.PI * 2);
         this.ctx.fill();
         
-        // Red hair
-        this.ctx.fillStyle = '#DC143C';
+        this.ctx.shadowColor = 'transparent';
+        
+        // Head with better shading
+        const headGradient = this.ctx.createRadialGradient(-3, -38, 0, 0, -35, 15);
+        headGradient.addColorStop(0, '#FFEEE6');
+        headGradient.addColorStop(0.7, '#FDBCB4');
+        headGradient.addColorStop(1, '#E6A899');
+        this.ctx.fillStyle = headGradient;
         this.ctx.beginPath();
-        this.ctx.arc(0, -35, 18, 0, Math.PI);
+        this.ctx.arc(0, -35, 18, 0, Math.PI * 2);
         this.ctx.fill();
         
-        // Eyes
-        this.ctx.fillStyle = '#000';
+        // Head outline
+        this.ctx.strokeStyle = '#D2A699';
+        this.ctx.lineWidth = 1.5;
         this.ctx.beginPath();
-        this.ctx.arc(-5, -35, 2, 0, Math.PI * 2);
-        this.ctx.arc(5, -35, 2, 0, Math.PI * 2);
+        this.ctx.arc(0, -35, 18, 0, Math.PI * 2);
+        this.ctx.stroke();
+        
+        // Red hair with highlights
+        const hairGradient = this.ctx.createLinearGradient(-18, -53, 18, -25);
+        hairGradient.addColorStop(0, '#FF6B6B');
+        hairGradient.addColorStop(0.3, '#DC143C');
+        hairGradient.addColorStop(0.7, '#B22222');
+        hairGradient.addColorStop(1, '#8B0000');
+        this.ctx.fillStyle = hairGradient;
+        this.ctx.beginPath();
+        this.ctx.arc(0, -35, 22, 0, Math.PI);
         this.ctx.fill();
         
-        // Draw shotgun
+        // Hair strands
+        this.ctx.strokeStyle = '#FF4444';
+        this.ctx.lineWidth = 2;
+        for(let i = -3; i <= 3; i++) {
+            this.ctx.beginPath();
+            this.ctx.moveTo(i * 6, -55);
+            this.ctx.lineTo(i * 4, -30);
+            this.ctx.stroke();
+        }
+        
+        // Eyes with sparkle
+        this.ctx.fillStyle = '#FFFFFF';
+        this.ctx.beginPath();
+        this.ctx.arc(-7, -35, 4, 0, Math.PI * 2);
+        this.ctx.arc(7, -35, 4, 0, Math.PI * 2);
+        this.ctx.fill();
+        
+        this.ctx.fillStyle = '#000000';
+        this.ctx.beginPath();
+        this.ctx.arc(-7, -35, 2.5, 0, Math.PI * 2);
+        this.ctx.arc(7, -35, 2.5, 0, Math.PI * 2);
+        this.ctx.fill();
+        
+        // Eye sparkles
+        this.ctx.fillStyle = '#FFFFFF';
+        this.ctx.beginPath();
+        this.ctx.arc(-6, -36, 1, 0, Math.PI * 2);
+        this.ctx.arc(8, -36, 1, 0, Math.PI * 2);
+        this.ctx.fill();
+        
+        // Eyelashes
+        this.ctx.strokeStyle = '#000000';
+        this.ctx.lineWidth = 1;
+        for(let i = 0; i < 3; i++) {
+            this.ctx.beginPath();
+            this.ctx.moveTo(-9 + i, -39);
+            this.ctx.lineTo(-10 + i, -41);
+            this.ctx.moveTo(7 + i, -39);
+            this.ctx.lineTo(6 + i, -41);
+            this.ctx.stroke();
+        }
+        
+        // Smile
+        this.ctx.strokeStyle = '#FF1493';
+        this.ctx.lineWidth = 2;
+        this.ctx.beginPath();
+        this.ctx.arc(0, -30, 8, 0.2, Math.PI - 0.2);
+        this.ctx.stroke();
+        
+        // Draw enhanced shotgun
         this.ctx.rotate(this.player.angle);
-        this.ctx.fillStyle = '#654321';
-        this.ctx.fillRect(0, -3, 40, 6);
+        
+        // Gun shadow
+        this.ctx.shadowColor = 'rgba(0, 0, 0, 0.4)';
+        this.ctx.shadowBlur = 6;
+        this.ctx.shadowOffsetX = 2;
+        this.ctx.shadowOffsetY = 2;
+        
+        // Gun stock
+        const stockGradient = this.ctx.createLinearGradient(0, -8, 0, 8);
+        stockGradient.addColorStop(0, '#8B4513');
+        stockGradient.addColorStop(0.5, '#654321');
+        stockGradient.addColorStop(1, '#4A2C17');
+        this.ctx.fillStyle = stockGradient;
+        this.ctx.fillRect(-5, -8, 45, 16);
         
         // Gun barrel
-        this.ctx.fillStyle = '#2F4F4F';
-        this.ctx.fillRect(35, -2, 15, 4);
+        const barrelGradient = this.ctx.createLinearGradient(35, -4, 35, 4);
+        barrelGradient.addColorStop(0, '#708090');
+        barrelGradient.addColorStop(0.5, '#2F4F4F');
+        barrelGradient.addColorStop(1, '#1C3333');
+        this.ctx.fillStyle = barrelGradient;
+        this.ctx.fillRect(35, -4, 20, 8);
+        
+        // Gun details
+        this.ctx.fillStyle = '#FFD700';
+        this.ctx.fillRect(15, -2, 8, 4);
+        
+        this.ctx.shadowColor = 'transparent';
         
         this.ctx.restore();
     }
@@ -315,80 +518,272 @@ class SweetShooter {
             
             switch(sweet.type) {
                 case 'cookie':
-                    this.ctx.fillStyle = '#D2691E';
+                    // Cookie shadow
+                    this.ctx.shadowColor = 'rgba(0, 0, 0, 0.3)';
+                    this.ctx.shadowBlur = 8;
+                    this.ctx.shadowOffsetX = 3;
+                    this.ctx.shadowOffsetY = 3;
+                    
+                    // Cookie base with gradient
+                    const cookieGradient = this.ctx.createRadialGradient(0, 0, 0, 0, 0, sweet.size/2);
+                    cookieGradient.addColorStop(0, '#F4A460');
+                    cookieGradient.addColorStop(0.6, '#D2691E');
+                    cookieGradient.addColorStop(1, '#8B4513');
+                    this.ctx.fillStyle = cookieGradient;
                     this.ctx.beginPath();
                     this.ctx.arc(0, 0, sweet.size/2, 0, Math.PI * 2);
                     this.ctx.fill();
                     
-                    // Cookie chips
-                    this.ctx.fillStyle = '#8B4513';
-                    for(let i = 0; i < 5; i++) {
-                        const angle = (i / 5) * Math.PI * 2;
-                        const x = Math.cos(angle) * 8;
-                        const y = Math.sin(angle) * 8;
+                    // Cookie outline
+                    this.ctx.shadowColor = 'transparent';
+                    this.ctx.strokeStyle = '#654321';
+                    this.ctx.lineWidth = 2;
+                    this.ctx.beginPath();
+                    this.ctx.arc(0, 0, sweet.size/2, 0, Math.PI * 2);
+                    this.ctx.stroke();
+                    
+                    // Cookie chips with variety
+                    const chipColors = ['#4A2C2A', '#654321', '#2F1B14'];
+                    for(let i = 0; i < 8; i++) {
+                        const angle = (i / 8) * Math.PI * 2 + Math.random() * 0.5;
+                        const radius = 4 + Math.random() * 8;
+                        const x = Math.cos(angle) * radius;
+                        const y = Math.sin(angle) * radius;
+                        this.ctx.fillStyle = chipColors[Math.floor(Math.random() * chipColors.length)];
                         this.ctx.beginPath();
-                        this.ctx.arc(x, y, 3, 0, Math.PI * 2);
+                        this.ctx.arc(x, y, 2 + Math.random() * 2, 0, Math.PI * 2);
                         this.ctx.fill();
+                    }
+                    
+                    // Cookie texture
+                    this.ctx.strokeStyle = 'rgba(139, 69, 19, 0.3)';
+                    this.ctx.lineWidth = 1;
+                    for(let i = 0; i < 3; i++) {
+                        this.ctx.beginPath();
+                        this.ctx.arc(0, 0, (sweet.size/2) - (i * 4), 0, Math.PI * 2);
+                        this.ctx.stroke();
                     }
                     break;
                     
                 case 'marshmallow':
-                    this.ctx.fillStyle = '#FFB6C1';
-                    this.ctx.fillRect(-sweet.size/2, -sweet.size/2, sweet.size, sweet.size);
+                    // Marshmallow shadow
+                    this.ctx.shadowColor = 'rgba(0, 0, 0, 0.3)';
+                    this.ctx.shadowBlur = 8;
+                    this.ctx.shadowOffsetX = 3;
+                    this.ctx.shadowOffsetY = 3;
                     
-                    // Marshmallow texture
+                    // Marshmallow base with gradient
+                    const marshmallowGradient = this.ctx.createLinearGradient(-sweet.size/2, -sweet.size/2, sweet.size/2, sweet.size/2);
+                    marshmallowGradient.addColorStop(0, '#FFFFFF');
+                    marshmallowGradient.addColorStop(0.3, '#FFE4E6');
+                    marshmallowGradient.addColorStop(0.7, '#FFB6C1');
+                    marshmallowGradient.addColorStop(1, '#FF91A4');
+                    this.ctx.fillStyle = marshmallowGradient;
+                    
+                    // Rounded rectangle for soft appearance
+                    const radius = 8;
+                    this.ctx.beginPath();
+                    this.ctx.roundRect(-sweet.size/2, -sweet.size/2, sweet.size, sweet.size, radius);
+                    this.ctx.fill();
+                    
+                    // Marshmallow outline
+                    this.ctx.shadowColor = 'transparent';
                     this.ctx.strokeStyle = '#FF69B4';
-                    this.ctx.lineWidth = 2;
-                    this.ctx.strokeRect(-sweet.size/2 + 5, -sweet.size/2 + 5, sweet.size - 10, sweet.size - 10);
+                    this.ctx.lineWidth = 3;
+                    this.ctx.beginPath();
+                    this.ctx.roundRect(-sweet.size/2, -sweet.size/2, sweet.size, sweet.size, radius);
+                    this.ctx.stroke();
+                    
+                    // Soft texture lines
+                    this.ctx.strokeStyle = 'rgba(255, 105, 180, 0.4)';
+                    this.ctx.lineWidth = 1;
+                    for(let i = 1; i < 4; i++) {
+                        this.ctx.beginPath();
+                        this.ctx.roundRect(-sweet.size/2 + (i*4), -sweet.size/2 + (i*4), sweet.size - (i*8), sweet.size - (i*8), radius - i);
+                        this.ctx.stroke();
+                    }
+                    
+                    // Highlight
+                    this.ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
+                    this.ctx.beginPath();
+                    this.ctx.roundRect(-sweet.size/2 + 3, -sweet.size/2 + 3, sweet.size/3, sweet.size/4, 3);
+                    this.ctx.fill();
                     break;
                     
                 case 'cake':
-                    this.ctx.fillStyle = '#FFD700';
-                    this.ctx.fillRect(-sweet.size/2, -sweet.size/2, sweet.size, sweet.size);
+                    // Cake shadow
+                    this.ctx.shadowColor = 'rgba(0, 0, 0, 0.4)';
+                    this.ctx.shadowBlur = 10;
+                    this.ctx.shadowOffsetX = 4;
+                    this.ctx.shadowOffsetY = 4;
                     
-                    // Cake layers
-                    this.ctx.fillStyle = '#FF69B4';
-                    this.ctx.fillRect(-sweet.size/2, -5, sweet.size, 10);
+                    // Cake base (bottom layer)
+                    const cakeBaseGradient = this.ctx.createLinearGradient(-sweet.size/2, -sweet.size/2, sweet.size/2, sweet.size/2);
+                    cakeBaseGradient.addColorStop(0, '#FFEC8C');
+                    cakeBaseGradient.addColorStop(0.5, '#FFD700');
+                    cakeBaseGradient.addColorStop(1, '#DAA520');
+                    this.ctx.fillStyle = cakeBaseGradient;
+                    this.ctx.fillRect(-sweet.size/2, -sweet.size/2 + 5, sweet.size, sweet.size - 5);
                     
-                    // Cherry on top
-                    this.ctx.fillStyle = '#FF0000';
+                    // Cake middle layer (frosting)
+                    const frostingGradient = this.ctx.createLinearGradient(-sweet.size/2, -10, sweet.size/2, 10);
+                    frostingGradient.addColorStop(0, '#FFB6C1');
+                    frostingGradient.addColorStop(0.5, '#FF69B4');
+                    frostingGradient.addColorStop(1, '#FF1493');
+                    this.ctx.fillStyle = frostingGradient;
+                    this.ctx.fillRect(-sweet.size/2, -8, sweet.size, 16);
+                    
+                    // Cake top layer
+                    this.ctx.fillStyle = cakeBaseGradient;
+                    this.ctx.fillRect(-sweet.size/2, -sweet.size/2, sweet.size, 15);
+                    
+                    this.ctx.shadowColor = 'transparent';
+                    
+                    // Decorative frosting swirls
+                    this.ctx.strokeStyle = '#FF1493';
+                    this.ctx.lineWidth = 3;
+                    this.ctx.lineCap = 'round';
+                    for(let i = 0; i < 3; i++) {
+                        this.ctx.beginPath();
+                        this.ctx.arc(-sweet.size/3 + (i * sweet.size/3), -2, 4, 0, Math.PI * 2);
+                        this.ctx.stroke();
+                    }
+                    
+                    // Cherry on top with stem
+                    this.ctx.fillStyle = '#DC143C';
                     this.ctx.beginPath();
-                    this.ctx.arc(0, -sweet.size/2 + 5, 4, 0, Math.PI * 2);
+                    this.ctx.arc(0, -sweet.size/2 + 3, 6, 0, Math.PI * 2);
+                    this.ctx.fill();
+                    
+                    // Cherry highlight
+                    this.ctx.fillStyle = '#FF6B6B';
+                    this.ctx.beginPath();
+                    this.ctx.arc(-2, -sweet.size/2 + 1, 2, 0, Math.PI * 2);
+                    this.ctx.fill();
+                    
+                    // Cherry stem
+                    this.ctx.strokeStyle = '#228B22';
+                    this.ctx.lineWidth = 2;
+                    this.ctx.beginPath();
+                    this.ctx.moveTo(0, -sweet.size/2 - 3);
+                    this.ctx.lineTo(2, -sweet.size/2 - 8);
+                    this.ctx.stroke();
+                    
+                    // Candles
+                    this.ctx.fillStyle = '#FFD700';
+                    this.ctx.fillRect(-3, -sweet.size/2 - 15, 2, 10);
+                    this.ctx.fillRect(3, -sweet.size/2 - 15, 2, 10);
+                    
+                    // Candle flames
+                    this.ctx.fillStyle = '#FF4500';
+                    this.ctx.beginPath();
+                    this.ctx.ellipse(-2, -sweet.size/2 - 16, 2, 4, 0, 0, Math.PI * 2);
+                    this.ctx.ellipse(4, -sweet.size/2 - 16, 2, 4, 0, 0, Math.PI * 2);
                     this.ctx.fill();
                     
                     // Health indicator for cakes
                     if (sweet.health < sweet.maxHealth) {
-                        this.ctx.fillStyle = 'red';
-                        this.ctx.fillRect(-sweet.size/2, -sweet.size/2 - 10, 20, 3);
-                        this.ctx.fillStyle = 'green';
-                        this.ctx.fillRect(-sweet.size/2, -sweet.size/2 - 10, 
-                            20 * (sweet.health / sweet.maxHealth), 3);
+                        // Background
+                        this.ctx.fillStyle = 'rgba(255, 0, 0, 0.7)';
+                        this.ctx.fillRect(-sweet.size/2, -sweet.size/2 - 15, sweet.size, 6);
+                        
+                        // Health bar
+                        const healthGradient = this.ctx.createLinearGradient(-sweet.size/2, 0, sweet.size/2, 0);
+                        healthGradient.addColorStop(0, '#00FF00');
+                        healthGradient.addColorStop(0.6, '#FFFF00');
+                        healthGradient.addColorStop(1, '#FF0000');
+                        this.ctx.fillStyle = healthGradient;
+                        this.ctx.fillRect(-sweet.size/2, -sweet.size/2 - 15, 
+                            sweet.size * (sweet.health / sweet.maxHealth), 6);
+                        
+                        // Health bar border
+                        this.ctx.strokeStyle = '#000';
+                        this.ctx.lineWidth = 1;
+                        this.ctx.strokeRect(-sweet.size/2, -sweet.size/2 - 15, sweet.size, 6);
                     }
                     break;
                     
                 case 'dynamite':
-                    this.ctx.fillStyle = '#8B0000';
-                    this.ctx.fillRect(-sweet.size/2, -sweet.size/2, sweet.size, sweet.size);
+                    // Dynamite shadow
+                    this.ctx.shadowColor = 'rgba(0, 0, 0, 0.5)';
+                    this.ctx.shadowBlur = 12;
+                    this.ctx.shadowOffsetX = 4;
+                    this.ctx.shadowOffsetY = 4;
                     
-                    // Fuse
-                    this.ctx.strokeStyle = '#000';
-                    this.ctx.lineWidth = 3;
-                    this.ctx.beginPath();
-                    this.ctx.moveTo(0, -sweet.size/2);
-                    this.ctx.lineTo(0, -sweet.size/2 - 15);
-                    this.ctx.stroke();
+                    // Dynamite body with gradient
+                    const dynamiteGradient = this.ctx.createLinearGradient(-sweet.size/2, -sweet.size/2, sweet.size/2, sweet.size/2);
+                    dynamiteGradient.addColorStop(0, '#DC143C');
+                    dynamiteGradient.addColorStop(0.3, '#8B0000');
+                    dynamiteGradient.addColorStop(0.7, '#660000');
+                    dynamiteGradient.addColorStop(1, '#330000');
+                    this.ctx.fillStyle = dynamiteGradient;
                     
-                    // Spark
-                    this.ctx.fillStyle = '#FFA500';
+                    // Rounded rectangle for dynamite
                     this.ctx.beginPath();
-                    this.ctx.arc(0, -sweet.size/2 - 15, 3, 0, Math.PI * 2);
+                    this.ctx.roundRect(-sweet.size/2, -sweet.size/2, sweet.size, sweet.size, 8);
                     this.ctx.fill();
                     
-                    // "TNT" text
+                    this.ctx.shadowColor = 'transparent';
+                    
+                    // Dynamite bands
+                    this.ctx.fillStyle = '#4A4A4A';
+                    this.ctx.fillRect(-sweet.size/2, -sweet.size/2 + 8, sweet.size, 3);
+                    this.ctx.fillRect(-sweet.size/2, sweet.size/2 - 11, sweet.size, 3);
+                    
+                    // Dynamite outline
+                    this.ctx.strokeStyle = '#000000';
+                    this.ctx.lineWidth = 2;
+                    this.ctx.beginPath();
+                    this.ctx.roundRect(-sweet.size/2, -sweet.size/2, sweet.size, sweet.size, 8);
+                    this.ctx.stroke();
+                    
+                    // Enhanced fuse
+                    this.ctx.strokeStyle = '#654321';
+                    this.ctx.lineWidth = 4;
+                    this.ctx.beginPath();
+                    this.ctx.moveTo(0, -sweet.size/2);
+                    this.ctx.quadraticCurveTo(5, -sweet.size/2 - 8, 0, -sweet.size/2 - 20);
+                    this.ctx.stroke();
+                    
+                    // Animated spark with particles
+                    const time = Date.now() * 0.01;
+                    const sparkSize = 4 + Math.sin(time) * 2;
+                    
+                    // Spark glow
+                    this.ctx.shadowColor = '#FFA500';
+                    this.ctx.shadowBlur = 15;
                     this.ctx.fillStyle = '#FFFF00';
-                    this.ctx.font = '12px Arial';
+                    this.ctx.beginPath();
+                    this.ctx.arc(0, -sweet.size/2 - 20, sparkSize, 0, Math.PI * 2);
+                    this.ctx.fill();
+                    
+                    // Spark particles
+                    for(let i = 0; i < 6; i++) {
+                        const angle = (i / 6) * Math.PI * 2 + time;
+                        const px = Math.cos(angle) * 8;
+                        const py = Math.sin(angle) * 8;
+                        this.ctx.fillStyle = `hsl(${30 + Math.sin(time + i) * 30}, 100%, 60%)`;
+                        this.ctx.beginPath();
+                        this.ctx.arc(px, -sweet.size/2 - 20 + py, 1, 0, Math.PI * 2);
+                        this.ctx.fill();
+                    }
+                    
+                    this.ctx.shadowColor = 'transparent';
+                    
+                    // Enhanced "TNT" text
+                    this.ctx.fillStyle = '#FFFF00';
+                    this.ctx.strokeStyle = '#FF0000';
+                    this.ctx.lineWidth = 1;
+                    this.ctx.font = 'bold 14px Arial';
                     this.ctx.textAlign = 'center';
+                    this.ctx.strokeText('TNT', 0, 5);
                     this.ctx.fillText('TNT', 0, 5);
+                    
+                    // Warning symbols
+                    this.ctx.fillStyle = '#FFD700';
+                    this.ctx.font = 'bold 8px Arial';
+                    this.ctx.fillText('⚠', -sweet.size/3, -5);
+                    this.ctx.fillText('⚠', sweet.size/3, -5);
                     break;
             }
             
@@ -397,23 +792,57 @@ class SweetShooter {
     }
     
     drawBullets() {
-        this.ctx.fillStyle = '#FFD700';
         this.bullets.forEach(bullet => {
+            this.ctx.save();
+            
+            // Bullet trail effect
+            this.ctx.shadowColor = '#FFD700';
+            this.ctx.shadowBlur = 8;
+            
+            // Bullet gradient
+            const bulletGradient = this.ctx.createRadialGradient(bullet.x, bullet.y, 0, bullet.x, bullet.y, bullet.size * 2);
+            bulletGradient.addColorStop(0, '#FFFF00');
+            bulletGradient.addColorStop(0.5, '#FFD700');
+            bulletGradient.addColorStop(1, '#DAA520');
+            this.ctx.fillStyle = bulletGradient;
+            
             this.ctx.beginPath();
             this.ctx.arc(bullet.x, bullet.y, bullet.size, 0, Math.PI * 2);
             this.ctx.fill();
+            
+            // Bullet outline
+            this.ctx.shadowColor = 'transparent';
+            this.ctx.strokeStyle = '#B8860B';
+            this.ctx.lineWidth = 1;
+            this.ctx.beginPath();
+            this.ctx.arc(bullet.x, bullet.y, bullet.size, 0, Math.PI * 2);
+            this.ctx.stroke();
+            
+            this.ctx.restore();
         });
     }
     
     drawParticles() {
         this.particles.forEach(particle => {
+            this.ctx.save();
             this.ctx.globalAlpha = particle.life / 30;
-            this.ctx.fillStyle = particle.color;
+            
+            // Particle glow effect
+            this.ctx.shadowColor = particle.color;
+            this.ctx.shadowBlur = 6;
+            
+            // Particle gradient
+            const particleGradient = this.ctx.createRadialGradient(particle.x, particle.y, 0, particle.x, particle.y, 4);
+            particleGradient.addColorStop(0, particle.color);
+            particleGradient.addColorStop(1, 'transparent');
+            this.ctx.fillStyle = particleGradient;
+            
             this.ctx.beginPath();
-            this.ctx.arc(particle.x, particle.y, 3, 0, Math.PI * 2);
+            this.ctx.arc(particle.x, particle.y, 3 + Math.random() * 2, 0, Math.PI * 2);
             this.ctx.fill();
+            
+            this.ctx.restore();
         });
-        this.ctx.globalAlpha = 1;
     }
     
     draw() {
@@ -430,14 +859,54 @@ class SweetShooter {
     drawStartScreen() {
         this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
         
-        this.ctx.fillStyle = '#ff6b9d';
-        this.ctx.font = '40px Arial';
+        // Background stars
+        for(let i = 0; i < 50; i++) {
+            const x = Math.random() * this.canvas.width;
+            const y = Math.random() * this.canvas.height;
+            const size = Math.random() * 2;
+            this.ctx.fillStyle = `rgba(255, 255, 255, ${Math.random() * 0.8})`;
+            this.ctx.beginPath();
+            this.ctx.arc(x, y, size, 0, Math.PI * 2);
+            this.ctx.fill();
+        }
+        
+        // Title with enhanced styling
+        this.ctx.shadowColor = '#ff6b9d';
+        this.ctx.shadowBlur = 20;
+        
+        const titleGradient = this.ctx.createLinearGradient(0, this.canvas.height / 2 - 80, 0, this.canvas.height / 2 - 20);
+        titleGradient.addColorStop(0, '#ff1493');
+        titleGradient.addColorStop(0.5, '#ff6b9d');
+        titleGradient.addColorStop(1, '#ff69b4');
+        this.ctx.fillStyle = titleGradient;
+        this.ctx.font = 'bold 48px Comic Sans MS';
         this.ctx.textAlign = 'center';
         this.ctx.fillText('Sweet Shooter', this.canvas.width / 2, this.canvas.height / 2 - 50);
         
-        this.ctx.fillStyle = '#666';
-        this.ctx.font = '20px Arial';
+        // Title outline
+        this.ctx.shadowColor = 'transparent';
+        this.ctx.strokeStyle = '#d1477a';
+        this.ctx.lineWidth = 3;
+        this.ctx.strokeText('Sweet Shooter', this.canvas.width / 2, this.canvas.height / 2 - 50);
+        
+        // Subtitle with glow
+        this.ctx.shadowColor = '#ff69b4';
+        this.ctx.shadowBlur = 10;
+        this.ctx.fillStyle = '#ff1493';
+        this.ctx.font = 'bold 24px Comic Sans MS';
         this.ctx.fillText('Click Start to Begin!', this.canvas.width / 2, this.canvas.height / 2 + 20);
+        
+        // Decorative elements
+        this.ctx.shadowColor = 'transparent';
+        const time = Date.now() * 0.005;
+        for(let i = 0; i < 8; i++) {
+            const angle = (i / 8) * Math.PI * 2 + time;
+            const x = this.canvas.width / 2 + Math.cos(angle) * 150;
+            const y = this.canvas.height / 2 + Math.sin(angle) * 80;
+            const sweetTypes = ['🍪', '🧁', '🍰', '🍭'];
+            this.ctx.font = '30px Arial';
+            this.ctx.fillText(sweetTypes[i % sweetTypes.length], x, y);
+        }
     }
     
     updateUI() {
