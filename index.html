@@ -11,24 +11,33 @@
 </head>
 <body>
     <div class="game-container">
-        <div class="game-header">
-            <h1>Aoife and Annes Sweet Shooter</h1>
-            <div class="score-container">
-                <span>Score: <span id="score">0</span></span>
-                <span>Wave: <span id="wave">1</span></span>
-                <span>Lives: <span id="lives">3</span></span>
+        <h1>Aoife and Annes Sweet Shooter</h1>
+        
+        <div class="game-area">
+            <canvas id="gameCanvas" width="800" height="600"></canvas>
+            
+            <!-- HUD Overlay -->
+            <div class="game-hud">
+                <div class="hud-top">
+                    <span class="hud-item">Score: <span id="score">0</span></span>
+                    <span class="hud-item">Wave: <span id="wave">1</span></span>
+                    <span class="hud-item">Lives: <span id="lives">3</span></span>
+                </div>
             </div>
-        </div>
-        
-        <canvas id="gameCanvas" width="800" height="600"></canvas>
-        
-        <div class="game-ui">
-            <button id="startBtn">Start Game</button>
-            <button id="pauseBtn" style="display: none;">Pause</button>
-            <div id="gameOver" style="display: none;">
-                <h2>Game Over!</h2>
-                <p>Final Score: <span id="finalScore">0</span></p>
-                <button id="restartBtn">Play Again</button>
+            
+            <!-- Game Controls Overlay -->
+            <div class="game-controls">
+                <button id="startBtn">Start Game</button>
+                <button id="pauseBtn" style="display: none;">Pause</button>
+            </div>
+            
+            <!-- Game Over Overlay -->
+            <div id="gameOver" class="game-over-overlay" style="display: none;">
+                <div class="game-over-content">
+                    <h2>Game Over!</h2>
+                    <p>Final Score: <span id="finalScore">0</span></p>
+                    <button id="restartBtn">Play Again</button>
+                </div>
             </div>
         </div>
     </div>

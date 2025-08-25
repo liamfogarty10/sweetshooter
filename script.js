@@ -9,13 +9,13 @@ class SweetShooter {
         
         this.setupCanvas();
         
-        // Player character
+        // Player character - positioned at bottom center, only top half visible
         this.player = {
             x: this.canvas.width / 2,
-            y: this.canvas.height - 100,
+            y: this.canvas.height - 40, // Only top half visible
             width: 60,
             height: 80,
-            angle: 0
+            angle: -Math.PI / 2 // Facing upward into screen
         };
         
         // Game objects
@@ -44,19 +44,16 @@ class SweetShooter {
     }
     
     setupCanvas() {
-        const container = this.canvas.parentElement;
-        
-        // Get actual viewport dimensions
+        // Get actual viewport dimensions  
         const viewportWidth = window.innerWidth;
         const viewportHeight = window.innerHeight;
         
-        // Calculate available space accounting for UI elements
-        const headerHeight = 120; // Approximate space for title and score
-        const controlsHeight = 80; // Space for buttons
+        // Calculate available space with minimal UI overhead
+        const titleHeight = 50; // Compact title
         const padding = 20;
         
         const availableWidth = viewportWidth - (padding * 2);
-        const availableHeight = viewportHeight - headerHeight - controlsHeight - (padding * 2);
+        const availableHeight = viewportHeight - titleHeight - (padding * 2);
         
         // Define aspect ratio (4:3 works well for mobile and desktop)
         const aspectRatio = 4 / 3;
@@ -75,15 +72,15 @@ class SweetShooter {
         }
         
         // Apply maximum sizes for very large screens
-        const maxWidth = Math.min(800, viewportWidth * 0.9);
-        const maxHeight = Math.min(600, viewportHeight * 0.7);
+        const maxWidth = Math.min(800, viewportWidth * 0.95);
+        const maxHeight = Math.min(600, viewportHeight * 0.85);
         
         canvasWidth = Math.min(canvasWidth, maxWidth);
         canvasHeight = Math.min(canvasHeight, maxHeight);
         
         // Ensure minimum playable size
-        canvasWidth = Math.max(280, canvasWidth);
-        canvasHeight = Math.max(210, canvasHeight);
+        canvasWidth = Math.max(300, canvasWidth);
+        canvasHeight = Math.max(225, canvasHeight);
         
         // Set canvas dimensions
         this.canvas.width = canvasWidth;
@@ -94,7 +91,7 @@ class SweetShooter {
         // Update player position based on new canvas size
         if (this.player) {
             this.player.x = this.canvas.width / 2;
-            this.player.y = this.canvas.height - 80; // Adjust for smaller screens
+            this.player.y = this.canvas.height - 40; // Only top half visible
         }
         
         console.log(`Canvas sized: ${canvasWidth}x${canvasHeight} for viewport: ${viewportWidth}x${viewportHeight}`);
@@ -253,9 +250,9 @@ class SweetShooter {
     }
     
     spawnWave() {
-        // Progressive difficulty - starts easier
+        // Progressive difficulty - starts easier with fixed spawn delay
         const sweetsInWave = Math.min(this.sweetsPerWave + Math.floor((this.wave - 1) / 3), 10);
-        const spawnDelay = Math.max(1500 - (this.wave * 50), 500); // Slower spawning initially
+        const spawnDelay = Math.max(2000 - (this.wave * 100), 800); // Fixed slower spawning
         
         for (let i = 0; i < sweetsInWave; i++) {
             setTimeout(() => {
@@ -553,7 +550,7 @@ class SweetShooter {
         this.ctx.arc(0, -30, 8, 0.2, Math.PI - 0.2);
         this.ctx.stroke();
         
-        // Draw enhanced shotgun
+        // Draw enhanced shotgun (adjusted for upward facing)
         this.ctx.rotate(this.player.angle);
         
         // Gun shadow
