@@ -688,15 +688,21 @@ class SweetShooter {
         this.shopOpen = false;
         document.getElementById('shopOverlay').style.display = 'none';
         
-        // Resume game if player is alive (regardless of sweet count)
+        // Resume game if player is alive
         if (this.lives > 0) {
             this.gameRunning = true;
             
-            // If no sweets are currently on screen and not already spawning, force a new wave
-            if (this.sweets.length === 0 && !this.spawningWave) {
-                this.waveCompleted = false; // Reset wave completion flag
-                this.spawnWave();
-            }
+            // Clear all existing sweets for a fresh start
+            this.sweets = [];
+            this.bullets = []; // Also clear bullets for clean slate
+            
+            // Add 0.5 second delay before spawning new sweets
+            setTimeout(() => {
+                if (this.gameRunning && this.lives > 0) {
+                    this.waveCompleted = false; // Reset wave completion flag
+                    this.spawnWave();
+                }
+            }, 500);
             
             this.gameLoop();
         }
