@@ -45,30 +45,47 @@ class SweetShooter {
     
     setupCanvas() {
         const container = this.canvas.parentElement;
-        const containerWidth = container.clientWidth - 40; // Account for padding
-        const containerHeight = window.innerHeight * 0.6; // 60% of viewport height
         
-        // Set responsive canvas size
-        const maxWidth = 800;
-        const maxHeight = 600;
-        const aspectRatio = maxWidth / maxHeight;
+        // Get actual viewport dimensions
+        const viewportWidth = window.innerWidth;
+        const viewportHeight = window.innerHeight;
+        
+        // Calculate available space accounting for UI elements
+        const headerHeight = 120; // Approximate space for title and score
+        const controlsHeight = 80; // Space for buttons
+        const padding = 20;
+        
+        const availableWidth = viewportWidth - (padding * 2);
+        const availableHeight = viewportHeight - headerHeight - controlsHeight - (padding * 2);
+        
+        // Define aspect ratio (4:3 works well for mobile and desktop)
+        const aspectRatio = 4 / 3;
         
         let canvasWidth, canvasHeight;
         
-        if (containerWidth / containerHeight > aspectRatio) {
-            // Container is wider than aspect ratio
-            canvasHeight = Math.min(containerHeight, maxHeight);
+        // Calculate size based on available space
+        if (availableWidth / availableHeight > aspectRatio) {
+            // Limited by height
+            canvasHeight = availableHeight;
             canvasWidth = canvasHeight * aspectRatio;
         } else {
-            // Container is taller than aspect ratio
-            canvasWidth = Math.min(containerWidth, maxWidth);
+            // Limited by width
+            canvasWidth = availableWidth;
             canvasHeight = canvasWidth / aspectRatio;
         }
         
-        // Ensure minimum size for playability
-        canvasWidth = Math.max(320, canvasWidth);
-        canvasHeight = Math.max(240, canvasHeight);
+        // Apply maximum sizes for very large screens
+        const maxWidth = Math.min(800, viewportWidth * 0.9);
+        const maxHeight = Math.min(600, viewportHeight * 0.7);
         
+        canvasWidth = Math.min(canvasWidth, maxWidth);
+        canvasHeight = Math.min(canvasHeight, maxHeight);
+        
+        // Ensure minimum playable size
+        canvasWidth = Math.max(280, canvasWidth);
+        canvasHeight = Math.max(210, canvasHeight);
+        
+        // Set canvas dimensions
         this.canvas.width = canvasWidth;
         this.canvas.height = canvasHeight;
         this.canvas.style.width = canvasWidth + 'px';
@@ -77,8 +94,10 @@ class SweetShooter {
         // Update player position based on new canvas size
         if (this.player) {
             this.player.x = this.canvas.width / 2;
-            this.player.y = this.canvas.height - 100;
+            this.player.y = this.canvas.height - 80; // Adjust for smaller screens
         }
+        
+        console.log(`Canvas sized: ${canvasWidth}x${canvasHeight} for viewport: ${viewportWidth}x${viewportHeight}`);
     }
     
     bindEvents() {
@@ -100,12 +119,24 @@ class SweetShooter {
             this.handleTouchMove(e);
         });
         
-        // Window resize event
+        // Window resize and orientation change events
         window.addEventListener('resize', () => {
-            this.setupCanvas();
-            if (!this.gameRunning) {
-                this.drawStartScreen();
-            }
+            clearTimeout(this.resizeTimeout);
+            this.resizeTimeout = setTimeout(() => {
+                this.setupCanvas();
+                if (!this.gameRunning) {
+                    this.drawStartScreen();
+                }
+            }, 100);
+        });
+        
+        window.addEventListener('orientationchange', () => {
+            setTimeout(() => {
+                this.setupCanvas();
+                if (!this.gameRunning) {
+                    this.drawStartScreen();
+                }
+            }, 200);
         });
         
         // Prevent zoom on double tap (iOS Safari)
