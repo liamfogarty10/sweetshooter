@@ -355,7 +355,17 @@ class SweetShooter {
         
         // Progressive speed increase - slightly faster progression
         const currentSpeed = this.sweetSpeed + (this.wave - 1) * 0.3;
-        const sweetSize = type === 'cake' ? 40 : 30;
+        
+        // Set appropriate size for each sweet type
+        let sweetSize = 30; // default
+        if (type === 'cake' || type === 'cupcake') {
+            sweetSize = 40;
+        } else if (type === 'donut') {
+            sweetSize = 35;
+        } else if (type === 'gummybear') {
+            sweetSize = 32;
+        }
+        // Other types use default 30
         
         // Ensure sweets spawn within canvas bounds with margin
         const margin = this.canvasBounds.playableMargin + sweetSize / 2;
@@ -368,8 +378,8 @@ class SweetShooter {
             vy: currentSpeed + Math.random() * 0.8,
             type: type,
             size: sweetSize,
-            health: type === 'cake' ? 2 : 1,
-            maxHealth: type === 'cake' ? 2 : 1
+            health: (type === 'cake' || type === 'cupcake') ? 2 : 1,
+            maxHealth: (type === 'cake' || type === 'cupcake') ? 2 : 1
         });
     }
     
@@ -442,6 +452,9 @@ class SweetShooter {
                                 this.playSound('marshmallowHit', 0.35);
                             } else if (sweet.type === 'cake') {
                                 this.playSound('cakeHit', 0.4);
+                            } else {
+                                // Generic hit sound for purchased sweets
+                                this.playSound('cookieHit', 0.3);
                             }
                             
                             this.createParticles(sweet.x, sweet.y, sweet.type);
