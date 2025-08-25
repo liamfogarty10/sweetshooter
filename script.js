@@ -29,6 +29,7 @@ class SweetShooter {
         this.bulletSpeed = 10; // Faster bullets to help player
         this.baseWaveDelay = 3000; // 3 second delay between waves
         this.spawningWave = false; // Prevent multiple wave spawning
+        this.waveCompleted = false; // Prevent multiple wave increments
         
         // Sound effects
         this.sounds = {
@@ -228,6 +229,7 @@ class SweetShooter {
         this.bullets = [];
         this.particles = [];
         this.spawningWave = false; // Reset spawning flag
+        this.waveCompleted = false; // Reset wave completion flag
         
         document.getElementById('startBtn').style.display = 'none';
         document.getElementById('pauseBtn').style.display = 'inline-block';
@@ -410,14 +412,16 @@ class SweetShooter {
             }
         }
         
-        // Check if wave is complete (only if not currently spawning)
-        if (this.sweets.length === 0 && !this.spawningWave) {
+        // Check if wave is complete (only once per wave)
+        if (this.sweets.length === 0 && !this.spawningWave && !this.waveCompleted) {
+            this.waveCompleted = true; // Mark wave as completed
             this.wave++;
             // Much more gradual speed increase
             this.sweetSpeed += 0.15;
             const waveDelay = Math.max(this.baseWaveDelay - (this.wave * 100), 2000);
             setTimeout(() => {
                 if (this.gameRunning) {
+                    this.waveCompleted = false; // Reset for next wave
                     this.spawnWave();
                 }
             }, waveDelay);

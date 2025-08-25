@@ -94,11 +94,18 @@ git push origin master
 
 ### 🐛 Known Issues & Fixes
 
-#### Recent Fixes (Latest)
-1. **Gameplay Speed Bug**: Fixed spawn delay calculation preventing rapid spawning
-2. **Character Position**: Moved to bottom center with only top half visible
-3. **Mobile Display**: Complete responsive rewrite for all device sizes
-4. **Audio Context**: Proper Web Audio API implementation with error handling
+#### Critical Fixes (Latest)
+1. **Wave Progression Bug**: Fixed critical bug where wave counter incremented 60+ times per frame
+   - Added `waveCompleted` flag to prevent multiple wave increments
+   - Wave now increments exactly once per completion
+   - Prevents jumping from wave 2 to wave 63+ causing massive sweet spawns
+2. **Spawn Timing Control**: Implemented proper wave spawning management
+   - Added `spawningWave` flag to prevent overlapping waves
+   - Fixed consistent 1-second intervals between individual sweets
+   - Added game state checks in all setTimeout callbacks
+3. **Character Position**: Moved to bottom center with only top half visible (`y: canvas.height - 40`)
+4. **Mobile Display**: Complete responsive rewrite for all device sizes
+5. **Audio Context**: Proper Web Audio API implementation with error handling
 
 #### Performance Optimizations
 - **Efficient Collision Detection**: Optimized distance calculations
