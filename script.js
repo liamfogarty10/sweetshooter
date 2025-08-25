@@ -715,7 +715,13 @@ class SweetShooter {
             cookie: '#D2691E',
             marshmallow: '#FFB6C1',
             cake: '#FFD700',
-            dynamite: '#FF4500'
+            dynamite: '#FF4500',
+            lollipop: '#FF69B4',
+            jellybean: '#32CD32',
+            gummybear: '#FFD700',
+            candycane: '#FF1493',
+            donut: '#DEB887',
+            cupcake: '#FF69B4'
         };
         
         for (let i = 0; i < 8; i++) {
@@ -724,7 +730,7 @@ class SweetShooter {
                 y: y,
                 vx: (Math.random() - 0.5) * 6,
                 vy: (Math.random() - 0.5) * 6,
-                color: colors[type],
+                color: colors[type] || '#FFB6C1',
                 life: 30
             });
         }
