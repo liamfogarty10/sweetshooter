@@ -683,7 +683,13 @@ class SweetShooter {
         // Resume game if player is alive (regardless of sweet count)
         if (this.lives > 0) {
             this.gameRunning = true;
-            // If no sweets are currently on screen, the wave system will spawn new ones
+            
+            // If no sweets are currently on screen and not already spawning, force a new wave
+            if (this.sweets.length === 0 && !this.spawningWave) {
+                this.waveCompleted = false; // Reset wave completion flag
+                this.spawnWave();
+            }
+            
             this.gameLoop();
         }
     }
