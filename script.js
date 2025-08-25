@@ -28,6 +28,7 @@ class SweetShooter {
         this.sweetSpeed = 0.5; // Much slower initial speed
         this.bulletSpeed = 10; // Faster bullets to help player
         this.baseWaveDelay = 3000; // 3 second delay between waves
+        this.spawningWave = false; // Prevent multiple wave spawning
         
         // Sound effects
         this.sounds = {
@@ -226,6 +227,7 @@ class SweetShooter {
         this.sweets = [];
         this.bullets = [];
         this.particles = [];
+        this.spawningWave = false; // Reset spawning flag
         
         document.getElementById('startBtn').style.display = 'none';
         document.getElementById('pauseBtn').style.display = 'inline-block';
@@ -250,13 +252,19 @@ class SweetShooter {
     }
     
     spawnWave() {
+        if (this.spawningWave) return; // Prevent multiple simultaneous waves
+        this.spawningWave = true;
+        
         // Progressive difficulty - starts easier with fixed spawn delay
         const sweetsInWave = Math.min(this.sweetsPerWave + Math.floor((this.wave - 1) / 3), 10);
-        const spawnDelay = Math.max(2000 - (this.wave * 100), 800); // Fixed slower spawning
+        const spawnDelay = 1000; // Fixed 1 second between individual sweets
         
+        // Spawn sweets one by one with consistent timing
         for (let i = 0; i < sweetsInWave; i++) {
             setTimeout(() => {
-                this.spawnSweet();
+                if (this.gameRunning) {
+                    this.spawnSweet();
+                }
             }, i * spawnDelay);
         }
         
@@ -264,9 +272,16 @@ class SweetShooter {
         const dynamiteChance = Math.min(0.1 + (this.wave * 0.05), 0.4);
         if (Math.random() < dynamiteChance) {
             setTimeout(() => {
-                this.spawnDynamite();
+                if (this.gameRunning) {
+                    this.spawnDynamite();
+                }
             }, Math.random() * (sweetsInWave * spawnDelay));
         }
+        
+        // Mark spawning complete after all sweets are spawned
+        setTimeout(() => {
+            this.spawningWave = false;
+        }, sweetsInWave * spawnDelay + 500);
     }
     
     spawnSweet() {
@@ -395,13 +410,17 @@ class SweetShooter {
             }
         }
         
-        // Check if wave is complete
-        if (this.sweets.length === 0) {
+        // Check if wave is complete (only if not currently spawning)
+        if (this.sweets.length === 0 && !this.spawningWave) {
             this.wave++;
             // Much more gradual speed increase
             this.sweetSpeed += 0.15;
-            const waveDelay = Math.max(this.baseWaveDelay - (this.wave * 100), 1500);
-            setTimeout(() => this.spawnWave(), waveDelay);
+            const waveDelay = Math.max(this.baseWaveDelay - (this.wave * 100), 2000);
+            setTimeout(() => {
+                if (this.gameRunning) {
+                    this.spawnWave();
+                }
+            }, waveDelay);
         }
         
         this.updateUI();
