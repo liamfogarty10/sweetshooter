@@ -483,7 +483,15 @@ class SweetShooter {
             if (sweet.y > this.canvas.height + 50) {
                 this.sweets.splice(i, 1);
                 if (sweet.type !== 'dynamite') {
-                    this.loseLife();
+                    // During challenge mode, only lose life if the fallen sweet was a target
+                    if (this.challengeActive) {
+                        if (this.challengeTargets.includes(sweet.type)) {
+                            this.loseLife();
+                        }
+                    } else {
+                        // Normal mode - lose life for any sweet that falls
+                        this.loseLife();
+                    }
                 }
             }
         }
